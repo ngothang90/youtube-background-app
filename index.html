@@ -1,957 +1,420 @@
 <!DOCTYPE html>
-<html lang="vi" class="dark">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StreamPulse - YouTube PWA Audio/Video Player</title>
-    <!-- Tailwind CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamPulse - Trình Phát Cá Nhân</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        yt: {
-                            red: '#FF0000',
-                            darkBg: '#0f0f0f',
-                            cardBg: '#1f1f1f',
-                            hoverBg: '#272727',
-                            border: '#383838',
-                            text: '#f1f1f1',
-                            muted: '#aaa'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Web App Manifest Dynamic Generator Script -->
-    <script>
-        // Tạo manifest động cho PWA cài đặt trên Android/iOS
-        const manifestData = {
-            "name": "StreamPulse Music & Video",
-            "short_name": "StreamPulse",
-            "start_url": "./",
-            "display": "standalone",
-            "background_color": "#0f0f0f",
-            "theme_color": "#0f0f0f",
-            "description": "Nghe nhạc và xem video YouTube không gián đoạn, tắt màn hình vẫn phát.",
-            "icons": [{
-                "src": "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
-                "sizes": "192x192",
-                "type": "image/jpeg"
-            }]
-        };
-        const stringManifest = JSON.stringify(manifestData);
-        const blob = new Blob([stringManifest], {type: 'application/json'});
-        const manifestURL = URL.createObjectURL(blob);
-        const link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = manifestURL;
-        document.head.appendChild(link);
-    </script>
+    <!-- PWA Manifest Link -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f0f0f">
     <style>
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f0f0f;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #383838;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-        body {
-            background-color: #0f0f0f;
-            color: #f1f1f1;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        /* Mobile Audio Visualizer Wave Effect */
-        .wave-bar {
-            display: inline-block;
-            width: 3px;
-            height: 12px;
-            margin: 0 1px;
-            background-color: #FF0000;
-            animation: wave 1.2s infinite ease-in-out;
-        }
-        .wave-bar:nth-child(2) { animation-delay: -1.1s; }
-        .wave-bar:nth-child(3) { animation-delay: -1.0s; }
-        .wave-bar:nth-child(4) { animation-delay: -0.9s; }
-        @keyframes wave {
-            0%, 40%, 100% { transform: scaleY(0.4); }
-            20% { transform: scaleY(1.0); }
-        }
+        body { background-color: #0f0f0f; color: #f1f1f1; font-family: system-ui, -apple-system, sans-serif; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #181818; }
+        ::-webkit-scrollbar-thumb { background: #3f3f3f; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden select-none">
+<body class="flex h-screen overflow-hidden">
 
-    <!-- TOP HEADER / SEARCH BAR -->
-    <header class="h-14 bg-yt-darkBg border-b border-yt-border px-3 md:px-6 flex items-center justify-between shrink-0 z-30">
-        <!-- Logo -->
-        <div class="flex items-center space-x-2 cursor-pointer" id="brandLogo">
-            <div class="bg-red-600 text-white p-1.5 rounded-xl flex items-center justify-center shadow-lg shadow-red-900/40">
-                <i class="fa-solid font-bold fa-play text-sm"></i>
-            </div>
-            <span class="font-bold text-lg tracking-tight hidden sm:inline-block">Stream<span class="text-red-500">Pulse</span></span>
+    <!-- Sidebar -->
+    <aside class="w-64 bg-[#212121] flex flex-col hidden md:flex border-r border-[#3f3f3f]">
+        <div class="p-4 flex items-center space-x-3 border-b border-[#3f3f3f]">
+            <i class="fa-solid fa-play-circle text-red-600 text-2xl"></i>
+            <span class="text-xl font-bold tracking-wider">StreamPulse</span>
         </div>
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="#" onclick="switchTab('home')" class="flex items-center space-x-4 p-3 rounded-lg hover:bg-[#3f3f3f] transition text-white font-medium" id="nav-home">
+                <i class="fa-solid fa-house w-6"></i><span>Trang chủ</span>
+            </a>
+            <a href="#" onclick="switchTab('history')" class="flex items-center space-x-4 p-3 rounded-lg hover:bg-[#3f3f3f] transition text-gray-400 hover:text-white" id="nav-history">
+                <i class="fa-solid fa-clock-rotate-left w-6"></i><span>Đã xem / Tìm kiếm</span>
+            </a>
+            <a href="#" onclick="switchTab('favorites')" class="flex items-center space-x-4 p-3 rounded-lg hover:bg-[#3f3f3f] transition text-gray-400 hover:text-white" id="nav-favorites">
+                <i class="fa-solid fa-heart w-6"></i><span>Yêu thích</span>
+            </a>
+        </nav>
+    </aside>
 
-        <!-- Search Form Container -->
-        <div class="relative flex-1 max-w-2xl mx-3">
-            <form id="searchForm" class="flex items-center">
-                <div class="relative w-full flex items-center">
-                    <input type="text" id="searchInput" 
-                        placeholder="Tìm kiếm bài hát, video trên YouTube..." 
-                        class="w-full bg-[#121212] text-yt-text border border-yt-border focus:border-red-500 rounded-l-full py-2 pl-4 pr-10 text-sm focus:outline-none transition-all"
-                        autocomplete="off">
-                    <button type="button" id="clearSearchBtn" class="hidden absolute right-3 text-gray-400 hover:text-white">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-                <button type="submit" class="bg-yt-cardBg hover:bg-yt-hoverBg border border-l-0 border-yt-border px-5 py-2 rounded-r-full text-yt-text">
-                    <i class="fa-solid fa-magnifying-glass text-sm"></i>
-                </button>
-            </form>
-
-            <!-- Search History Dropdown / Auto-suggestions -->
-            <div id="searchHistoryDropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-yt-cardBg border border-yt-border rounded-xl shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto">
-                <div class="p-2 border-b border-yt-border flex justify-between items-center text-xs text-yt-muted px-3">
-                    <span>Lịch sử tìm kiếm gần đây</span>
-                    <button id="clearAllHistoryBtn" class="text-red-400 hover:underline">Xóa tất cả</button>
-                </div>
-                <ul id="historyList" class="divide-y divide-yt-border/40">
-                    <!-- Dynamic history items -->
-                </ul>
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+        <!-- Top Header / Search Bar -->
+        <header class="h-16 bg-[#0f0f0f] border-b border-[#3f3f3f] flex items-center justify-between px-6 z-10">
+            <div class="flex items-center space-x-4 md:hidden">
+                <i class="fa-solid fa-play-circle text-red-600 text-xl"></i>
+                <span class="font-bold">StreamPulse</span>
             </div>
-        </div>
-
-        <!-- Right Quick Actions -->
-        <div class="flex items-center space-x-2 sm:space-x-4">
-            <button id="sleepTimerNavBtn" class="p-2 text-yt-muted hover:text-white rounded-full hover:bg-yt-hoverBg relative" title="Hẹn giờ tắt">
-                <i class="fa-solid fa-clock text-lg"></i>
-                <span id="timerBadge" class="hidden absolute top-0 right-0 bg-red-600 text-[10px] font-bold text-white px-1 rounded-full">30m</span>
-            </button>
-            <button id="installPwaBtn" class="hidden bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-full border border-red-500/40 transition">
-                <i class="fa-solid fa-download mr-1"></i> Tải App
-            </button>
-        </div>
-    </header>
-
-    <!-- MAIN APP LAYOUT (Sidebar + Content) -->
-    <div class="flex-1 flex overflow-hidden relative">
-        
-        <!-- SIDEBAR NAVIGATION -->
-        <aside class="w-16 md:w-56 bg-yt-darkBg border-r border-yt-border flex flex-col justify-between shrink-0 p-2 z-20">
-            <nav class="space-y-1">
-                <button data-target="homeTab" class="nav-btn active flex items-center space-x-4 w-full p-3 rounded-xl text-left hover:bg-yt-hoverBg transition text-red-500">
-                    <i class="fa-solid fa-house text-lg w-6 text-center"></i>
-                    <span class="text-sm font-medium hidden md:inline-block">Trang chủ</span>
-                </button>
-                <button data-target="historyTab" class="nav-btn flex items-center space-x-4 w-full p-3 rounded-xl text-left hover:bg-yt-hoverBg transition text-yt-muted hover:text-yt-text">
-                    <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center"></i>
-                    <span class="text-sm font-medium hidden md:inline-block">Đã xem / Tìm kiếm</span>
-                </button>
-                <button data-target="favoritesTab" class="nav-btn flex items-center space-x-4 w-full p-3 rounded-xl text-left hover:bg-yt-hoverBg transition text-yt-muted hover:text-yt-text">
-                    <i class="fa-solid fa-heart text-lg w-6 text-center"></i>
-                    <span class="text-sm font-medium hidden md:inline-block">Yêu thích</span>
-                </button>
-            </nav>
-
-            <div class="bg-yt-cardBg p-3 rounded-xl text-xs text-yt-muted hidden md:block border border-yt-border">
-                <div class="flex items-center space-x-2 text-green-400 font-semibold mb-1">
-                    <i class="fa-solid fa-shield-halved"></i>
-                    <span>Tắt Màn Hình Vẫn Phát</span>
-                </div>
-                <p class="leading-relaxed text-[11px]">Sử dụng Media Session API chuẩn W3C để duy trì phát nhạc ngay cả khi bạn khóa màn hình thiết bị.</p>
-            </div>
-        </aside>
-
-        <!-- MAIN VIEW CONTENT AREA -->
-        <main class="flex-1 bg-yt-darkBg overflow-y-auto p-3 md:p-6 relative" id="mainScrollContainer">
-            
-            <!-- VIEW TAB: HOME (GRID VIDEO) -->
-            <section id="homeTab" class="tab-content space-y-6">
-                <!-- Section Header -->
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 id="homeTitle" class="text-lg md:text-xl font-bold tracking-wide">Gợi ý dựa trên sở thích của bạn</h2>
-                        <p class="text-xs text-yt-muted">Tự động tổng hợp dựa theo lịch sử nghe & tìm kiếm</p>
+            <!-- Search Form -->
+            <div class="flex-1 max-w-xl mx-auto px-4">
+                <form id="search-form" onsubmit="handleSearch(event)" class="flex">
+                    <div class="flex items-center bg-[#121212] border border-[#303030] rounded-l-full px-4 w-full focus-within:border-blue-500">
+                        <i class="fa-solid fa-magnifying-glass text-gray-400 mr-2"></i>
+                        <input type="text" id="search-input" placeholder="Tìm kiếm bài hát, video..." class="bg-transparent w-full py-2 focus:outline-none text-white text-sm">
                     </div>
-                    <button id="refreshFeedBtn" class="text-xs bg-yt-cardBg border border-yt-border hover:bg-yt-hoverBg px-3 py-1.5 rounded-lg flex items-center space-x-1">
-                        <i class="fa-solid fa-arrows-rotate"></i>
-                        <span>Làm mới</span>
+                    <button type="submit" class="bg-[#222] border border-l-0 border-[#303030] px-6 rounded-r-full hover:bg-[#333] text-gray-300 transition">
+                        <i class="fa-solid fa-magnifying-glass"></i>
                     </button>
-                </div>
+                </form>
+            </div>
+            <!-- Status Badge -->
+            <div class="hidden lg:flex items-center space-x-2 text-xs text-green-400 bg-green-950/40 border border-green-800/50 px-3 py-1.5 rounded-full">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                <span>Chạy ngầm (Media Session Active)</span>
+            </div>
+        </header>
 
-                <!-- Keywords Pill Filter -->
-                <div id="keywordsPillContainer" class="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none text-xs">
-                    <!-- Dynamic Pill Badges -->
+        <!-- Dynamic Views Container -->
+        <div class="flex-1 overflow-y-auto p-6 pb-32" id="main-container">
+            <!-- HOME VIEW -->
+            <div id="view-home" class="space-y-6">
+                <div>
+                    <h1 class="text-xl font-bold mb-1">Gợi ý dựa trên sở thích của bạn</h1>
+                    <p class="text-sm text-gray-400" id="recommendation-subtitle">Tổng hợp tự động dựa trên lịch sử tìm kiếm và thói quen nghe của bạn</p>
                 </div>
+                <!-- Categories Chips -->
+                <div class="flex space-x-2 overflow-x-auto pb-2">
+                    <button onclick="filterCategory('Tất cả')" class="cat-btn bg-white text-black px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition">Tất cả</button>
+                    <button onclick="filterCategory('Lofi')" class="cat-btn bg-[#272727] hover:bg-[#3f3f3f] px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition">Lofi</button>
+                    <button onclick="filterCategory('Nhạc ngủ ngon')" class="cat-btn bg-[#272727] hover:bg-[#3f3f3f] px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition">Nhạc ngủ ngon</button>
+                    <button onclick="filterCategory('Remix')" class="cat-btn bg-[#272727] hover:bg-[#3f3f3f] px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition">Remix / EDM</button>
+                    <button onclick="filterCategory('Podcast')" class="cat-btn bg-[#272727] hover:bg-[#3f3f3f] px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition">Podcast</button>
+                </div>
+                <!-- Video Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" id="video-grid">
+                    <!-- Dynamic populated via JS -->
+                </div>
+            </div>
 
-                <!-- Video Grid Loading / Results -->
-                <div id="videoGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <!-- Dynamic Video Cards -->
+            <!-- HISTORY VIEW -->
+            <div id="view-history" class="space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-xl font-bold">Lịch sử tìm kiếm & Đã xem</h1>
+                    <button onclick="clearHistory()" class="text-sm bg-red-600/20 text-red-400 border border-red-600/30 px-3 py-1 rounded hover:bg-red-600/30 transition">Xóa lịch sử</button>
                 </div>
-            </section>
+                <div id="history-list" class="space-y-3">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
 
-            <!-- VIEW TAB: HISTORY TAB -->
-            <section id="historyTab" class="tab-content hidden space-y-4">
-                <div class="flex justify-between items-center border-b border-yt-border pb-3">
-                    <h2 class="text-xl font-bold">Lịch sử phát & Tìm kiếm</h2>
-                    <button id="clearWatchHistoryBtn" class="text-xs text-red-400 hover:text-red-300 bg-red-950/40 border border-red-800/40 px-3 py-1.5 rounded-lg">
-                        Xóa lịch sử đã xem
-                    </button>
+            <!-- FAVORITES VIEW -->
+            <div id="view-favorites" class="space-y-6 hidden">
+                <h1 class="text-xl font-bold">Danh sách yêu thích</h1>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" id="favorites-grid">
+                    <!-- Populated via JS -->
                 </div>
-                <div id="historyGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <!-- History cards injected dynamically -->
-                </div>
-            </section>
-
-            <!-- VIEW TAB: FAVORITES TAB -->
-            <section id="favoritesTab" class="tab-content hidden space-y-4">
-                <div class="flex justify-between items-center border-b border-yt-border pb-3">
-                    <h2 class="text-xl font-bold">Danh sách video / Bài hát yêu thích</h2>
-                    <span id="favCountBadge" class="text-xs bg-yt-cardBg border border-yt-border px-2.5 py-1 rounded-full text-yt-muted">0 mục</span>
-                </div>
-                <div id="favoritesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <!-- Favorite items -->
-                </div>
-            </section>
-
-        </main>
-    </div>
-
-    <!-- MAIN PLAYER OVERLAY / DOCK PLAYER -->
-    <!-- Player Bar floating on bottom -->
-    <div id="mainPlayerContainer" class="bg-[#181818] border-t border-yt-border flex flex-col z-40 transition-all duration-300">
-        
-        <!-- Expanded Full Player Header Bar (Hidden by default, shown when expanded) -->
-        <div id="expandedPlayerHeader" class="hidden items-center justify-between p-3 border-b border-yt-border bg-black/40">
-            <button id="minimizePlayerBtn" class="text-yt-muted hover:text-white p-2">
-                <i class="fa-solid fa-chevron-down text-lg"></i>
-            </button>
-            <span class="text-xs font-semibold uppercase tracking-wider text-yt-muted">Đang phát (Tối ưu Chạy Ngầm)</span>
-            <div class="flex items-center space-x-2">
-                <button id="pipBtn" class="text-yt-muted hover:text-white p-2" title="Hình trong hình (PiP)">
-                    <i class="fa-solid fa-window-restore text-base"></i>
-                </button>
             </div>
         </div>
 
-        <div class="flex flex-col md:flex-row items-center p-2 md:p-3 justify-between gap-2 max-w-7xl mx-auto w-full">
-            
-            <!-- Video Preview / Audio Visualizer Area -->
-            <div class="flex items-center space-x-3 w-full md:w-1/3">
-                <div class="relative w-16 h-12 bg-black rounded-lg overflow-hidden shrink-0 group border border-yt-border">
-                    <!-- Embedded Hidden Video / Audio Element -->
-                    <video id="audioVideoElement" class="w-full h-full object-cover" playsinline crossorigin="anonymous"></video>
-                    <!-- Audio Wave Overlay -->
-                    <div id="audioWaveOverlay" class="absolute inset-0 bg-black/60 flex items-center justify-center hidden">
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                    </div>
+        <!-- Sticky Player Footer -->
+        <footer class="absolute bottom-0 left-0 right-0 bg-[#181818] border-t border-[#3f3f3f] px-4 py-3 flex items-center justify-between z-20">
+            <div class="flex items-center space-x-3 w-1/4">
+                <div id="player-thumb" class="w-12 h-12 bg-[#333] rounded overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    <i class="fa-solid fa-music text-gray-500"></i>
                 </div>
-
-                <div class="overflow-hidden flex-1">
-                    <h4 id="currentTrackTitle" class="text-sm font-semibold text-white truncate">Chưa chọn bài hát</h4>
-                    <p id="currentTrackAuthor" class="text-xs text-yt-muted truncate">Hãy chọn một video từ danh sách để bắt đầu phát</p>
-                </div>
-
-                <button id="toggleFavoriteBtn" class="text-yt-muted hover:text-red-500 p-2">
-                    <i class="fa-regular fa-heart text-lg" id="favIcon"></i>
-                </button>
-            </div>
-
-            <!-- Controls Section -->
-            <div class="flex flex-col items-center w-full md:w-1/3 space-y-1">
-                <div class="flex items-center space-x-4">
-                    <button id="prevTrackBtn" class="text-yt-muted hover:text-white p-1">
-                        <i class="fa-solid fa-backward-step text-base"></i>
-                    </button>
-                    <button id="playPauseBtn" class="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition shadow-lg">
-                        <i class="fa-solid fa-play text-sm ml-0.5" id="playPauseIcon"></i>
-                    </button>
-                    <button id="nextTrackBtn" class="text-yt-muted hover:text-white p-1">
-                        <i class="fa-solid fa-forward-step text-base"></i>
-                    </button>
-                </div>
-
-                <!-- Progress Bar -->
-                <div class="w-full flex items-center space-x-2 text-[11px] text-yt-muted">
-                    <span id="currentTimeText">0:00</span>
-                    <input type="range" id="progressBar" min="0" max="100" value="0" class="w-full h-1 bg-yt-border rounded-lg appearance-none cursor-pointer accent-red-600">
-                    <span id="durationText">0:00</span>
+                <div class="overflow-hidden">
+                    <h4 id="player-title" class="text-sm font-medium truncate text-white">Chưa chọn bài hát</h4>
+                    <p id="player-channel" class="text-xs text-gray-400 truncate">Hãy chọn một video từ danh sách để bắt đầu phát</p>
                 </div>
             </div>
 
-            <!-- Additional Settings & Sleep Timer Quick Access -->
-            <div class="hidden md:flex items-center justify-end space-x-3 w-1/3">
-                <button id="sleepTimerBtn" class="flex items-center space-x-1.5 text-xs text-yt-muted hover:text-white bg-yt-cardBg px-3 py-1.5 rounded-full border border-yt-border">
-                    <i class="fa-solid fa-moon text-yellow-400"></i>
-                    <span id="sleepTimerStatusText">Hẹn giờ</span>
+            <div class="flex flex-col items-center w-2/4 space-y-1">
+                <div class="flex items-center space-x-6">
+                    <button onclick="togglePlay()" class="text-white hover:text-red-500 text-xl"><i class="fa-solid fa-play" id="play-pause-icon"></i></button>
+                </div>
+                <div class="w-full flex items-center space-x-2 text-xs text-gray-400">
+                    <span id="current-time">0:00</span>
+                    <input type="range" id="progress-bar" value="0" min="0" max="100" class="w-full accent-red-600 h-1 bg-gray-600 rounded-lg cursor-pointer" oninput="seekAudio(this.value)">
+                    <span id="duration">0:00</span>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end space-x-4 w-1/4">
+                <button onclick="toggleTimerModal()" class="text-xs bg-[#2a2a2a] hover:bg-[#3a3a3a] px-3 py-1.5 rounded-lg text-gray-300 flex items-center space-x-1">
+                    <i class="fa-regular fa-clock"></i><span>Hẹn giờ</span>
                 </button>
                 <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-volume-high text-xs text-yt-muted"></i>
-                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" class="w-20 h-1 bg-yt-border rounded-lg appearance-none cursor-pointer accent-white">
+                    <i class="fa-solid fa-volume-high text-gray-400"></i>
+                    <input type="range" min="0" max="1" step="0.05" value="1" class="w-20 accent-white h-1 bg-gray-600 rounded-lg cursor-pointer" oninput="setVolume(this.value)">
                 </div>
             </div>
+        </footer>
+    </main>
 
+    <!-- Hidden Audio/Video element for background streaming -->
+    <audio id="audio-player" crossorigin="anonymous"></audio>
+
+    <!-- Modal Hẹn Giờ -->
+    <div id="timer-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center hidden z-50">
+        <div class="bg-[#212121] border border-[#3f3f3f] p-6 rounded-xl w-80 space-y-4">
+            <h3 class="text-lg font-bold">Hẹn giờ tắt phát</h3>
+            <div class="space-y-2">
+                <button onclick="setSleepTimer(15)" class="w-full text-left p-2.5 rounded bg-[#2a2a2a] hover:bg-[#3a3a3a] text-sm">Sau 15 phút</button>
+                <button onclick="setSleepTimer(30)" class="w-full text-left p-2.5 rounded bg-[#2a2a2a] hover:bg-[#3a3a3a] text-sm">Sau 30 phút</button>
+                <button onclick="setSleepTimer(60)" class="w-full text-left p-2.5 rounded bg-[#2a2a2a] hover:bg-[#3a3a3a] text-sm">Sau 1 giờ</button>
+                <button onclick="setSleepTimer(0)" class="w-full text-left p-2.5 rounded bg-red-600/20 text-red-400 text-sm">Hủy hẹn giờ</button>
+            </div>
+            <button onclick="toggleTimerModal()" class="w-full bg-[#333] py-2 rounded text-sm font-medium">Đóng</button>
         </div>
     </div>
 
-    <!-- MODAL: SLEEP TIMER (HẸN GIỜ TẮT) -->
-    <div id="sleepTimerModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
-        <div class="bg-yt-cardBg border border-yt-border w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl">
-            <div class="flex justify-between items-center border-b border-yt-border pb-3">
-                <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-moon text-yellow-400 text-lg"></i>
-                    <h3 class="font-bold text-base">Bộ Hẹn Giờ Tắt Nhạc</h3>
-                </div>
-                <button id="closeTimerModalBtn" class="text-yt-muted hover:text-white">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <p class="text-xs text-yt-muted">Tự động dừng phát âm thanh/video sau khoảng thời gian đã chọn để tiết kiệm pin & dữ liệu khi bạn ngủ.</p>
-
-            <div class="grid grid-cols-2 gap-2">
-                <button data-minutes="15" class="timer-option-btn bg-yt-darkBg hover:bg-red-600 hover:text-white border border-yt-border p-3 rounded-xl text-xs font-semibold text-center transition">15 Phút</button>
-                <button data-minutes="30" class="timer-option-btn bg-yt-darkBg hover:bg-red-600 hover:text-white border border-yt-border p-3 rounded-xl text-xs font-semibold text-center transition">30 Phút</button>
-                <button data-minutes="45" class="timer-option-btn bg-yt-darkBg hover:bg-red-600 hover:text-white border border-yt-border p-3 rounded-xl text-xs font-semibold text-center transition">45 Phút</button>
-                <button data-minutes="60" class="timer-option-btn bg-yt-darkBg hover:bg-red-600 hover:text-white border border-yt-border p-3 rounded-xl text-xs font-semibold text-center transition">60 Phút</button>
-            </div>
-
-            <button id="cancelTimerBtn" class="w-full bg-red-950/30 text-red-400 border border-red-900/40 p-2.5 rounded-xl text-xs font-semibold hover:bg-red-900/50 transition">
-                Tắt bộ hẹn giờ
-            </button>
-        </div>
-    </div>
-
-    <!-- JAVASCRIPT LOGIC -->
     <script>
-        /**
-         * STREAMPULSE - YOUTUBE BACKGROUND PWA ENGINE
-         * Single File Consolidated Vanilla JavaScript Solution
-         */
-
-        // --- SAMPLE DATA ENGINE (Giả lập kết quả YouTube API thực tế & Invidious API) ---
-        const MOCK_VIDEOS = [
-            {
-                id: "L_LUpnjgPso",
-                title: "Lofi Hip Hop Radio - Beats to Relax/Study to",
-                author: "Lofi Girl",
-                thumbnail: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=60",
-                duration: "3:45:00",
-                category: "Lofi",
-                streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-            },
-            {
-                id: "2g811Eo7K8U",
-                title: "Chill Pop Songs Acoustic 2026 - Nhạc Trẻ Lofi Chill Rơi Lệ",
-                author: "Chill Melodies",
-                thumbnail: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=60",
-                duration: "45:20",
-                category: "Chill",
-                streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
-            },
-            {
-                id: "kJQP7kiw5Fk",
-                title: "Nhạc Không Lời Giúp Sâu Giấc Nhớ Sâu Tắt Màn Hình Vẫn Nghe Được",
-                author: "Deep Sleep Audio",
-                thumbnail: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=60",
-                duration: "1:00:00",
-                category: "Sleep",
-                streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
-            },
-            {
-                id: "fJ9rUzIMcZQ",
-                title: "Queen - Bohemian Rhapsody (Official Remastered Video)",
-                author: "Queen Official",
-                thumbnail: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=500&auto=format&fit=crop&q=60",
-                duration: "5:55",
-                category: "Rock",
-                streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
-            },
-            {
-                id: "3JZ_D3ELwOQ",
-                title: "EDM Remix Ultra Music Festival Bass Boosted",
-                author: "Electronic Nation",
-                thumbnail: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&auto=format&fit=crop&q=60",
-                duration: "12:30",
-                category: "EDM",
-                streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"
-            },
-            {
-                id: "7NOS81X1dUA",
-                title: "Podcast: Bí Quyết Quản Lý Thời Gian & Năng Suất Đột Phá",
-                author: "Thái Vân Linh Podcast",
-                thumbnail: "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=500&auto=format&fit=crop&q=60",
-                duration: "28:15",
-                category: "Podcast",
-                streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
-            }
+        // Danh sách video mẫu phong phú tích hợp sẵn
+        const sampleVideos = [
+            { id: 'jfKfPfyJRdk', title: 'Lofi Hip Hop Radio - Beats to Relax/Study to', channel: 'Lofi Girl', category: 'Lofi', duration: 'Live', audioUrl: 'https://stream.zeno.fm/f3wvbbqmdg8uv', thumb: 'https://img.youtube.com/vi/jfKfPfyJRdk/hqdefault.jpg' },
+            { id: '5qap5aO4i9A', title: 'Chill Pop Songs Acoustic 2026 - Nhạc Trẻ Lofi Chill', channel: 'Chill Melodies', category: 'Lofi', duration: '45:20', audioUrl: 'https://stream.zeno.fm/0r0xa3e2dv8uv', thumb: 'https://img.youtube.com/vi/5qap5aO4i9A/hqdefault.jpg' },
+            { id: '1fueZCTYkpA', title: 'Nhạc Không Lời Giúp Sâu Giấc Nhớ Sâu Tắt Màn Hình Vẫn Nghe Được', channel: 'Deep Sleep Audio', category: 'Nhạc ngủ ngon', duration: '1:00:00', audioUrl: 'https://stream.zeno.fm/bb8uv0g8uv8uv', thumb: 'https://img.youtube.com/vi/1fueZCTYkpA/hqdefault.jpg' },
+            { id: '2Vv-BfVoq4g', title: 'Queen - Bohemian Rhapsody (Official Remastered Video)', channel: 'Queen Official', category: 'Remix', duration: '5:55', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', thumb: 'https://img.youtube.com/vi/2Vv-BfVoq4g/hqdefault.jpg' },
+            { id: '36YnV9STBqc', title: 'EDM Remix Ultra Music Festival Bass Boosted', channel: 'Electronic Nation', category: 'Remix', duration: '12:30', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', thumb: 'https://img.youtube.com/vi/36YnV9STBqc/hqdefault.jpg' },
+            { id: '5MgKyK_I2Zk', title: 'Podcast: Bí Quyết Quản Lý Thời Gian & Năng Suất Đột Phá', channel: 'Thái Vân Linh Podcast', category: 'Podcast', duration: '28:15', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', thumb: 'https://img.youtube.com/vi/5MgKyK_I2Zk/hqdefault.jpg' }
         ];
 
-        // --- STATE MANAGEMENT ---
-        let state = {
-            searchHistory: JSON.parse(localStorage.getItem('sp_search_history') || '["Lofi chill", "Nhạc ngủ ngon", "EDM Bass Boosted"]'),
-            watchHistory: JSON.parse(localStorage.getItem('sp_watch_history') || '[]'),
-            favorites: JSON.parse(localStorage.getItem('sp_favorites') || '[]'),
-            currentVideo: null,
-            isPlaying: false,
-            sleepTimerEnd: null,
-            timerInterval: null
+        let currentFiltered = [...sampleVideos];
+        let searchHistory = JSON.parse(localStorage.getItem('streampulse_history') || '[]');
+        let favorites = JSON.parse(localStorage.getItem('streampulse_favorites') || '[]');
+        let currentPlaying = null;
+        let sleepTimeout = null;
+
+        const audioElement = document.getElementById('audio-player');
+
+        // Khởi tạo ứng dụng khi load trang
+        window.onload = function() {
+            renderVideos(sampleVideos);
+            checkSmartRecommendations();
         };
 
-        // --- DOM ELEMENTS ---
-        const searchInput = document.getElementById('searchInput');
-        const searchForm = document.getElementById('searchForm');
-        const clearSearchBtn = document.getElementById('clearSearchBtn');
-        const searchHistoryDropdown = document.getElementById('searchHistoryDropdown');
-        const historyList = document.getElementById('historyList');
-        const clearAllHistoryBtn = document.getElementById('clearAllHistoryBtn');
-        const videoGrid = document.getElementById('videoGrid');
-        const keywordsPillContainer = document.getElementById('keywordsPillContainer');
-        const audioVideoElement = document.getElementById('audioVideoElement');
-        const playPauseBtn = document.getElementById('playPauseBtn');
-        const playPauseIcon = document.getElementById('playPauseIcon');
-        const currentTrackTitle = document.getElementById('currentTrackTitle');
-        const currentTrackAuthor = document.getElementById('currentTrackAuthor');
-        const progressBar = document.getElementById('progressBar');
-        const currentTimeText = document.getElementById('currentTimeText');
-        const durationText = document.getElementById('durationText');
-        const toggleFavoriteBtn = document.getElementById('toggleFavoriteBtn');
-        const favIcon = document.getElementById('favIcon');
-        const favCountBadge = document.getElementById('favCountBadge');
-        const audioWaveOverlay = document.getElementById('audioWaveOverlay');
-        const pipBtn = document.getElementById('pipBtn');
-        const sleepTimerModal = document.getElementById('sleepTimerModal');
-        const sleepTimerNavBtn = document.getElementById('sleepTimerNavBtn');
-        const sleepTimerBtn = document.getElementById('sleepTimerBtn');
-        const sleepTimerStatusText = document.getElementById('sleepTimerStatusText');
-        const timerBadge = document.getElementById('timerBadge');
-
-        // --- APP INITIALIZATION ---
-        window.addEventListener('DOMContentLoaded', () => {
-            renderSearchHistory();
-            renderKeywords();
-            renderVideoGrid(MOCK_VIDEOS);
-            renderFavorites();
-            renderWatchHistory();
-            setupMediaSessionHandlers();
-            setupNavigation();
-        });
-
-        // --- SEARCH & LOCAL STORAGE LOGIC ---
-        searchInput.addEventListener('focus', () => {
-            if (state.searchHistory.length > 0) {
-                searchHistoryDropdown.classList.remove('hidden');
-            }
-        });
-
-        searchInput.addEventListener('input', (e) => {
-            if (e.target.value.trim().length > 0) {
-                clearSearchBtn.classList.remove('hidden');
-            } else {
-                clearSearchBtn.classList.add('hidden');
-            }
-        });
-
-        clearSearchBtn.addEventListener('click', () => {
-            searchInput.value = '';
-            clearSearchBtn.classList.add('hidden');
-            searchInput.focus();
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!searchForm.contains(e.target) && !searchHistoryDropdown.contains(e.target)) {
-                searchHistoryDropdown.classList.add('hidden');
-            }
-        });
-
-        searchForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const query = searchInput.value.trim();
-            if (!query) return;
-
-            // Save search history to localStorage
-            saveSearchQuery(query);
-            searchHistoryDropdown.classList.add('hidden');
+        // Chuyển tab giao diện
+        function switchTab(tab) {
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-history').classList.add('hidden');
+            document.getElementById('view-favorites').classList.add('hidden');
             
-            // Filter videos simulated search
-            const filtered = MOCK_VIDEOS.filter(v => 
-                v.title.toLowerCase().includes(query.toLowerCase()) || 
-                v.author.toLowerCase().includes(query.toLowerCase()) ||
-                v.category.toLowerCase().includes(query.toLowerCase())
-            );
+            document.getElementById('nav-home').className = "flex items-center space-x-4 p-3 rounded-lg hover:bg-[#3f3f3f] transition text-gray-400 hover:text-white";
+            document.getElementById('nav-history').className = "flex items-center space-x-4 p-3 rounded-lg hover:bg-[#3f3f3f] transition text-gray-400 hover:text-white";
+            document.getElementById('nav-favorites').className = "flex items-center space-x-4 p-3 rounded-lg hover:bg-[#3f3f3f] transition text-gray-400 hover:text-white";
 
-            document.getElementById('homeTitle').innerText = `Kết quả tìm kiếm cho: "${query}"`;
-            renderVideoGrid(filtered.length > 0 ? filtered : MOCK_VIDEOS);
-        });
-
-        function saveSearchQuery(query) {
-            let history = state.searchHistory.filter(item => item.toLowerCase() !== query.toLowerCase());
-            history.unshift(query);
-            if (history.length > 10) history.pop(); // Keep top 10
-            state.searchHistory = history;
-            localStorage.setItem('sp_search_history', JSON.stringify(history));
-            renderSearchHistory();
-            renderKeywords();
+            if(tab === 'home') {
+                document.getElementById('view-home').classList.remove('hidden');
+                document.getElementById('nav-home').className = "flex items-center space-x-4 p-3 rounded-lg bg-[#3f3f3f] transition text-white font-medium";
+            } else if(tab === 'history') {
+                document.getElementById('view-history').classList.remove('hidden');
+                document.getElementById('nav-history').className = "flex items-center space-x-4 p-3 rounded-lg bg-[#3f3f3f] transition text-white font-medium";
+                renderHistory();
+            } else if(tab === 'favorites') {
+                document.getElementById('view-favorites').classList.remove('hidden');
+                document.getElementById('nav-favorites').className = "flex items-center space-x-4 p-3 rounded-lg bg-[#3f3f3f] transition text-white font-medium";
+                renderFavorites();
+            }
         }
 
-        function renderSearchHistory() {
-            historyList.innerHTML = '';
-            if (state.searchHistory.length === 0) {
-                searchHistoryDropdown.classList.add('hidden');
+        // Render danh sách video lên màn hình
+        function renderVideos(list, containerId = 'video-grid') {
+            const container = document.getElementById(containerId);
+            if(list.length === 0) {
+                container.innerHTML = `<p class="text-gray-400 text-sm col-span-full">Không tìm thấy nội dung phù hợp.</p>`;
                 return;
             }
-
-            state.searchHistory.forEach((item, index) => {
-                const li = document.createElement('li');
-                li.className = 'px-3 py-2 text-xs flex items-center justify-between hover:bg-yt-hoverBg cursor-pointer';
-                li.innerHTML = `
-                    <div class="flex items-center space-x-3 flex-1 overflow-hidden">
-                        <i class="fa-solid fa-clock-rotate-left text-yt-muted"></i>
-                        <span class="truncate">${item}</span>
-                    </div>
-                    <button class="delete-history-btn text-yt-muted hover:text-red-400 p-1" data-index="${index}">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                `;
-
-                li.querySelector('span').addEventListener('click', () => {
-                    searchInput.value = item;
-                    searchForm.dispatchEvent(new Event('submit'));
-                });
-
-                li.querySelector('.delete-history-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    deleteHistoryItem(index);
-                });
-
-                historyList.appendChild(li);
-            });
-        }
-
-        function deleteHistoryItem(index) {
-            state.searchHistory.splice(index, 1);
-            localStorage.setItem('sp_search_history', JSON.stringify(state.searchHistory));
-            renderSearchHistory();
-        }
-
-        clearAllHistoryBtn.addEventListener('click', () => {
-            state.searchHistory = [];
-            localStorage.removeItem('sp_search_history');
-            renderSearchHistory();
-        });
-
-        // --- RENDER KEYWORD PILLS BASED ON HISTORY ---
-        function renderKeywords() {
-            keywordsPillContainer.innerHTML = '';
-            const allPills = ['Tất cả', ...new Set([...state.searchHistory, 'Lofi', 'Chill', 'Podcast', 'EDM'])];
-            
-            allPills.forEach((pill, idx) => {
-                const badge = document.createElement('button');
-                badge.className = `px-3 py-1.5 rounded-lg whitespace-nowrap border ${idx === 0 ? 'bg-white text-black border-white' : 'bg-yt-cardBg border-yt-border text-yt-text hover:bg-yt-hoverBg'}`;
-                badge.innerText = pill;
-                badge.addEventListener('click', () => {
-                    if (pill === 'Tất cả') {
-                        document.getElementById('homeTitle').innerText = 'Gợi ý dựa trên sở thích của bạn';
-                        renderVideoGrid(MOCK_VIDEOS);
-                    } else {
-                        searchInput.value = pill;
-                        searchForm.dispatchEvent(new Event('submit'));
-                    }
-                });
-                keywordsPillContainer.appendChild(badge);
-            });
-        }
-
-        // --- RENDER VIDEO GRID ---
-        function renderVideoGrid(videos) {
-            videoGrid.innerHTML = '';
-            if (videos.length === 0) {
-                videoGrid.innerHTML = `<div class="col-span-full text-center py-10 text-yt-muted">Không tìm thấy video phù hợp.</div>`;
-                return;
-            }
-
-            videos.forEach(video => {
-                const isFav = state.favorites.some(f => f.id === video.id);
-                const card = document.createElement('div');
-                card.className = 'bg-yt-cardBg border border-yt-border/50 rounded-xl overflow-hidden hover:border-yt-border transition cursor-pointer group flex flex-col justify-between';
-                card.innerHTML = `
-                    <div>
-                        <div class="relative aspect-video bg-black overflow-hidden">
-                            <img src="${video.thumbnail}" alt="${video.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-                            <span class="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-medium px-1.5 py-0.5 rounded">
-                                ${video.duration}
-                            </span>
-                            <button class="play-overlay-btn absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                                <div class="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center shadow-xl">
-                                    <i class="fa-solid fa-play text-lg ml-1"></i>
-                                </div>
+            container.innerHTML = list.map(item => {
+                const isFav = favorites.some(f => f.id === item.id);
+                return `
+                    <div class="bg-[#1f1f1f] rounded-xl overflow-hidden hover:bg-[#2a2a2a] transition flex flex-col group cursor-pointer border border-[#2d2d2d]" onclick="playMedia('${item.id}')">
+                        <div class="relative aspect-video bg-[#111]">
+                            <img src="${item.thumb}" class="w-full h-full object-cover" alt="${item.title}">
+                            <span class="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded">${item.duration}</span>
+                        </div>
+                        <div class="p-3 flex justify-between items-start flex-1">
+                            <div>
+                                <h3 class="font-medium text-sm text-white line-clamp-2 mb-1">${item.title}</h3>
+                                <p class="text-xs text-gray-400">${item.channel}</p>
+                            </div>
+                            <button onclick="event.stopPropagation(); toggleFavorite('${item.id}')" class="text-gray-400 hover:text-red-500 p-1">
+                                <i class="${isFav ? 'fa-solid text-red-500' : 'fa-regular'} fa-heart"></i>
                             </button>
                         </div>
-                        <div class="p-3">
-                            <h3 class="font-semibold text-sm line-clamp-2 leading-snug group-hover:text-red-400 transition">${video.title}</h3>
-                            <p class="text-xs text-yt-muted mt-1">${video.author}</p>
-                        </div>
-                    </div>
-                    <div class="px-3 pb-3 flex justify-between items-center text-xs text-yt-muted border-t border-yt-border/30 pt-2 mt-1">
-                        <span class="bg-yt-darkBg px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">${video.category}</span>
-                        <button class="card-fav-btn p-1 hover:text-red-500 ${isFav ? 'text-red-500' : ''}">
-                            <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-                        </button>
                     </div>
                 `;
-
-                // Play video on click
-                card.querySelector('.play-overlay-btn').addEventListener('click', () => playVideo(video));
-                card.querySelector('h3').addEventListener('click', () => playVideo(video));
-
-                // Favorite click
-                card.querySelector('.card-fav-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    toggleFavorite(video);
-                    renderVideoGrid(videos);
-                });
-
-                videoGrid.appendChild(card);
-            });
+            }).join('');
         }
 
-        // --- MEDIA PLAYER & MEDIA SESSION API (BACKGROUND PLAY KEY ENGINE) ---
-        function playVideo(video) {
-            state.currentVideo = video;
-            audioVideoElement.src = video.streamUrl;
-            audioVideoElement.play().then(() => {
-                state.isPlaying = true;
-                updatePlayPauseUI();
-                updateMediaSessionMetadata(video);
-                addToWatchHistory(video);
-                updateFavoriteButtonState();
-            }).catch(err => {
-                console.error("Playback failed:", err);
-            });
+        // Xử lý tìm kiếm thông minh & lưu lịch sử vào localStorage
+        function handleSearch(e) {
+            e.preventDefault();
+            const keyword = document.getElementById('search-input').value.trim();
+            if(!keyword) return;
 
-            currentTrackTitle.innerText = video.title;
-            currentTrackAuthor.innerText = video.author;
-            audioWaveOverlay.classList.remove('hidden');
+            // Lưu vào lịch sử tìm kiếm
+            if(!searchHistory.includes(keyword)) {
+                searchHistory.unshift(keyword);
+                if(searchHistory.length > 20) searchHistory.pop();
+                localStorage.setItem('streampulse_history', JSON.stringify(searchHistory));
+            }
+
+            // Lọc danh sách video
+            const results = sampleVideos.filter(v => 
+                v.title.toLowerCase().includes(keyword.toLowerCase()) || 
+                v.category.toLowerCase().includes(keyword.toLowerCase()) ||
+                v.channel.toLowerCase().includes(keyword.toLowerCase())
+            );
+
+            switchTab('home');
+            document.getElementById('recommendation-subtitle').innerText = `Kết quả tìm kiếm cho: "${keyword}"`;
+            renderVideos(results);
         }
 
-        // KEY FEATURE: MEDIA SESSION API - TẮT MÀN HÌNH VẪN PHÁT
-        function updateMediaSessionMetadata(video) {
+        // Gợi ý thông minh dựa trên lịch sử tìm kiếm cũ
+        function checkSmartRecommendations() {
+            if(searchHistory.length > 0) {
+                const lastQuery = searchHistory[0];
+                const matched = sampleVideos.filter(v => v.title.toLowerCase().includes(lastQuery.toLowerCase()) || v.category.toLowerCase().includes(lastQuery.toLowerCase()));
+                if(matched.length > 0) {
+                    document.getElementById('recommendation-subtitle').innerText = `Gợi ý dựa trên lịch sử tìm kiếm gần đây của bạn ("${lastQuery}")`;
+                }
+            }
+        }
+
+        // Phát Media & Cấu hình Media Session API (Chạy ngầm khi tắt màn hình)
+        function playMedia(id) {
+            const item = sampleVideos.find(v => v.id === id) || favorites.find(v => v.id === id);
+            if(!item) return;
+            currentPlaying = item;
+
+            audioElement.src = item.audioUrl;
+            audioElement.play().catch(err => console.log("Auto-play blocked:", err));
+
+            // Cập nhật giao diện thanh phát bên dưới
+            document.getElementById('player-title').innerText = item.title;
+            document.getElementById('player-channel').innerText = item.channel;
+            document.getElementById('player-thumb').innerHTML = `<img src="${item.thumb}" class="w-full h-full object-cover">`;
+            document.getElementById('play-pause-icon').className = "fa-solid fa-pause";
+
+            // Cấu hình Media Session API để khóa màn hình vẫn hiển thị trình điều khiển
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
-                    title: video.title,
-                    artist: video.author,
+                    title: item.title,
+                    artist: item.channel,
                     album: 'StreamPulse PWA',
-                    artwork: [
-                        { src: video.thumbnail, sizes: '96x96', type: 'image/jpeg' },
-                        { src: video.thumbnail, sizes: '256x256', type: 'image/jpeg' },
-                        { src: video.thumbnail, sizes: '512x512', type: 'image/jpeg' }
-                    ]
+                    artwork: [{ src: item.thumb, sizes: '512x512', type: 'image/jpg' }]
                 });
+
+                navigator.mediaSession.setActionHandler('play', () => { audioElement.play(); document.getElementById('play-pause-icon').className = "fa-solid fa-pause"; });
+                navigator.mediaSession.setActionHandler('pause', () => { audioElement.pause(); document.getElementById('play-pause-icon').className = "fa-solid fa-play"; });
             }
         }
 
-        function setupMediaSessionHandlers() {
-            if ('mediaSession' in navigator) {
-                navigator.mediaSession.setActionHandler('play', () => {
-                    audioVideoElement.play();
-                    state.isPlaying = true;
-                    updatePlayPauseUI();
-                });
-                navigator.mediaSession.setActionHandler('pause', () => {
-                    audioVideoElement.pause();
-                    state.isPlaying = false;
-                    updatePlayPauseUI();
-                });
-                navigator.mediaSession.setActionHandler('previoustrack', () => {
-                    playPrevTrack();
-                });
-                navigator.mediaSession.setActionHandler('nexttrack', () => {
-                    playNextTrack();
-                });
-                navigator.mediaSession.setActionHandler('seekto', (details) => {
-                    if (details.fastSeek && ('fastSeek' in audioVideoElement)) {
-                        audioVideoElement.fastSeek(details.seekTime);
-                        return;
-                    }
-                    audioVideoElement.currentTime = details.seekTime;
-                });
+        function togglePlay() {
+            if(!currentPlaying) {
+                playMedia(sampleVideos[0].id);
+                return;
             }
-        }
-
-        // PLAY/PAUSE CONTROLS
-        playPauseBtn.addEventListener('click', () => {
-            if (!state.currentVideo) return;
-            if (audioVideoElement.paused) {
-                audioVideoElement.play();
-                state.isPlaying = true;
+            if(audioElement.paused) {
+                audioElement.play();
+                document.getElementById('play-pause-icon').className = "fa-solid fa-pause";
             } else {
-                audioVideoElement.pause();
-                state.isPlaying = false;
-            }
-            updatePlayPauseUI();
-        });
-
-        function updatePlayPauseUI() {
-            if (state.isPlaying) {
-                playPauseIcon.className = "fa-solid fa-pause text-sm ml-0";
-                audioWaveOverlay.classList.remove('hidden');
-            } else {
-                playPauseIcon.className = "fa-solid fa-play text-sm ml-0.5";
-                audioWaveOverlay.classList.add('hidden');
+                audioElement.pause();
+                document.getElementById('play-pause-icon').className = "fa-solid fa-play";
             }
         }
 
-        // TRACK PROGRESS UPDATES
-        audioVideoElement.addEventListener('timeupdate', () => {
-            if (isNaN(audioVideoElement.duration)) return;
-            const progress = (audioVideoElement.currentTime / audioVideoElement.duration) * 100;
-            progressBar.value = progress;
-            currentTimeText.innerText = formatTime(audioVideoElement.currentTime);
-            durationText.innerText = formatTime(audioVideoElement.duration);
-        });
+        // Thanh tiến trình & âm lượng
+        audioElement.ontimeupdate = function() {
+            if(audioElement.duration) {
+                const progress = (audioElement.currentTime / audioElement.duration) * 100;
+                document.getElementById('progress-bar').value = progress;
+                document.getElementById('current-time').innerText = formatTime(audioElement.currentTime);
+                document.getElementById('duration').innerText = formatTime(audioElement.duration);
+            }
+        };
 
-        progressBar.addEventListener('input', (e) => {
-            if (!audioVideoElement.duration) return;
-            const seekTime = (e.target.value / 100) * audioVideoElement.duration;
-            audioVideoElement.currentTime = seekTime;
-        });
+        function seekAudio(val) {
+            if(audioElement.duration) {
+                audioElement.currentTime = (val / 100) * audioElement.duration;
+            }
+        }
+
+        function setVolume(val) {
+            audioElement.volume = val;
+        }
 
         function formatTime(seconds) {
-            const min = Math.floor(seconds / 60);
-            const sec = Math.floor(seconds % 60);
-            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
         }
 
-        // PIP (PICTURE IN PICTURE)
-        pipBtn.addEventListener('click', async () => {
-            try {
-                if (document.pictureInPictureElement) {
-                    await document.exitPictureInPicture();
-                } else if (document.pictureInPictureEnabled) {
-                    await audioVideoElement.requestPictureInPicture();
-                }
-            } catch (error) {
-                console.error("PiP Error:", error);
+        // Lọc theo danh mục
+        function filterCategory(cat) {
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.className = "cat-btn bg-[#272727] hover:bg-[#3f3f3f] px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition";
+                if(btn.innerText.includes(cat)) btn.className = "cat-btn bg-white text-black px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition";
+            });
+            const filtered = cat === 'Tất cả' ? sampleVideos : sampleVideos.filter(v => v.category === cat);
+            renderVideos(filtered);
+        }
+
+        // Quản lý Yêu thích
+        function toggleFavorite(id) {
+            const item = sampleVideos.find(v => v.id === id);
+            const index = favorites.findIndex(f => f.id === id);
+            if(index > -1) {
+                favorites.splice(index, 1);
+            } else if(item) {
+                favorites.push(item);
             }
-        });
-
-        // PREV/NEXT TRACK
-        document.getElementById('prevTrackBtn').addEventListener('click', playPrevTrack);
-        document.getElementById('nextTrackBtn').addEventListener('click', playNextTrack);
-
-        function playNextTrack() {
-            if (!state.currentVideo) return;
-            const idx = MOCK_VIDEOS.findIndex(v => v.id === state.currentVideo.id);
-            const nextIdx = (idx + 1) % MOCK_VIDEOS.length;
-            playVideo(MOCK_VIDEOS[nextIdx]);
-        }
-
-        function playPrevTrack() {
-            if (!state.currentVideo) return;
-            const idx = MOCK_VIDEOS.findIndex(v => v.id === state.currentVideo.id);
-            const prevIdx = (idx - 1 + MOCK_VIDEOS.length) % MOCK_VIDEOS.length;
-            playVideo(MOCK_VIDEOS[prevIdx]);
-        }
-
-        // --- FAVORITES & WATCH HISTORY MANAGEMENT ---
-        function toggleFavorite(video) {
-            const index = state.favorites.findIndex(f => f.id === video.id);
-            if (index > -1) {
-                state.favorites.splice(index, 1);
-            } else {
-                state.favorites.push(video);
-            }
-            localStorage.setItem('sp_favorites', JSON.stringify(state.favorites));
-            updateFavoriteButtonState();
-            renderFavorites();
-        }
-
-        toggleFavoriteBtn.addEventListener('click', () => {
-            if (state.currentVideo) {
-                toggleFavorite(state.currentVideo);
-            }
-        });
-
-        function updateFavoriteButtonState() {
-            if (!state.currentVideo) return;
-            const isFav = state.favorites.some(f => f.id === state.currentVideo.id);
-            favIcon.className = isFav ? "fa-solid fa-heart text-red-500" : "fa-regular fa-heart";
+            localStorage.setItem('streampulse_favorites', JSON.stringify(favorites));
+            renderVideos(currentFiltered);
         }
 
         function renderFavorites() {
-            const favGrid = document.getElementById('favoritesGrid');
-            favGrid.innerHTML = '';
-            favCountBadge.innerText = `${state.favorites.length} mục`;
+            renderVideos(favorites, 'favorites-grid');
+        }
 
-            if (state.favorites.length === 0) {
-                favGrid.innerHTML = `<div class="col-span-full text-center py-12 text-yt-muted">Chưa có video/bài hát yêu thích nào.</div>`;
+        // Quản lý Lịch sử
+        function renderHistory() {
+            const listEl = document.getElementById('history-list');
+            if(searchHistory.length === 0) {
+                listEl.innerHTML = `<p class="text-gray-400 text-sm">Chưa có lịch sử tìm kiếm nào.</p>`;
                 return;
             }
-
-            state.favorites.forEach(video => {
-                const card = document.createElement('div');
-                card.className = 'bg-yt-cardBg border border-yt-border rounded-xl p-3 flex items-center justify-between hover:bg-yt-hoverBg transition cursor-pointer';
-                card.innerHTML = `
-                    <div class="flex items-center space-x-3 overflow-hidden">
-                        <img src="${video.thumbnail}" class="w-14 h-10 object-cover rounded-lg shrink-0">
-                        <div class="overflow-hidden">
-                            <h4 class="text-xs font-semibold truncate">${video.title}</h4>
-                            <p class="text-[11px] text-yt-muted truncate">${video.author}</p>
-                        </div>
-                    </div>
-                    <button class="remove-fav-btn text-red-400 hover:text-red-300 p-2 shrink-0">
-                        <i class="fa-solid fa-trash-can text-sm"></i>
-                    </button>
-                `;
-                card.addEventListener('click', () => playVideo(video));
-                card.querySelector('.remove-fav-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    toggleFavorite(video);
-                });
-                favGrid.appendChild(card);
-            });
+            listEl.innerHTML = searchHistory.map((term, idx) => `
+                <div class="flex justify-between items-center bg-[#1f1f1f] p-3 rounded-lg border border-[#2d2d2d]">
+                    <span class="text-sm font-medium"><i class="fa-solid fa-clock-rotate-left mr-3 text-gray-400"></i>${term}</span>
+                    <button onclick="searchFromHistory('${term}')" class="text-xs bg-[#333] hover:bg-[#444] px-3 py-1.5 rounded text-white transition">Tìm lại</button>
+                </div>
+            `).join('');
         }
 
-        function addToWatchHistory(video) {
-            let history = state.watchHistory.filter(v => v.id !== video.id);
-            history.unshift({ ...video, watchedAt: new Date().toLocaleTimeString('vi-VN') });
-            if (history.length > 20) history.pop();
-            state.watchHistory = history;
-            localStorage.setItem('sp_watch_history', JSON.stringify(history));
-            renderWatchHistory();
+        function searchFromHistory(term) {
+            document.getElementById('search-input').value = term;
+            handleSearch({ preventDefault: () => {} });
         }
 
-        function renderWatchHistory() {
-            const historyGrid = document.getElementById('historyGrid');
-            historyGrid.innerHTML = '';
-            if (state.watchHistory.length === 0) {
-                historyGrid.innerHTML = `<div class="col-span-full text-center py-12 text-yt-muted">Lịch sử xem trống.</div>`;
+        function clearHistory() {
+            searchHistory = [];
+            localStorage.removeItem('streampulse_history');
+            renderHistory();
+        }
+
+        // Hẹn giờ tắt
+        function toggleTimerModal() {
+            const modal = document.getElementById('timer-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function setSleepTimer(minutes) {
+            if(sleepTimeout) clearTimeout(sleepTimeout);
+            toggleTimerModal();
+            if(minutes === 0) {
+                alert("Đã hủy hẹn giờ tắt.");
                 return;
             }
-
-            state.watchHistory.forEach(video => {
-                const card = document.createElement('div');
-                card.className = 'bg-yt-cardBg border border-yt-border rounded-xl p-3 flex items-center justify-between hover:bg-yt-hoverBg transition cursor-pointer';
-                card.innerHTML = `
-                    <div class="flex items-center space-x-3 overflow-hidden">
-                        <img src="${video.thumbnail}" class="w-14 h-10 object-cover rounded-lg shrink-0">
-                        <div class="overflow-hidden">
-                            <h4 class="text-xs font-semibold truncate">${video.title}</h4>
-                            <p class="text-[11px] text-yt-muted truncate">Đã xem lúc: ${video.watchedAt}</p>
-                        </div>
-                    </div>
-                `;
-                card.addEventListener('click', () => playVideo(video));
-                historyGrid.appendChild(card);
-            });
-        }
-
-        document.getElementById('clearWatchHistoryBtn').addEventListener('click', () => {
-            state.watchHistory = [];
-            localStorage.removeItem('sp_watch_history');
-            renderWatchHistory();
-        });
-
-        // --- SLEEP TIMER FEATURE ---
-        const openModalBtns = [sleepTimerNavBtn, sleepTimerBtn];
-        openModalBtns.forEach(btn => btn?.addEventListener('click', () => sleepTimerModal.classList.remove('hidden')));
-        document.getElementById('closeTimerModalBtn').addEventListener('click', () => sleepTimerModal.classList.add('hidden'));
-
-        document.querySelectorAll('.timer-option-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const minutes = parseInt(e.target.dataset.minutes);
-                startSleepTimer(minutes);
-                sleepTimerModal.classList.add('hidden');
-            });
-        });
-
-        document.getElementById('cancelTimerBtn').addEventListener('click', () => {
-            clearSleepTimer();
-            sleepTimerModal.classList.add('hidden');
-        });
-
-        function startSleepTimer(minutes) {
-            clearSleepTimer();
-            const targetTime = Date.now() + minutes * 60 * 1000;
-            state.sleepTimerEnd = targetTime;
-
-            timerBadge.innerText = `${minutes}m`;
-            timerBadge.classList.remove('hidden');
-            sleepTimerStatusText.innerText = `Tắt sau: ${minutes}m`;
-
-            state.timerInterval = setInterval(() => {
-                const remaining = Math.max(0, Math.ceil((state.sleepTimerEnd - Date.now()) / 1000));
-                if (remaining <= 0) {
-                    audioVideoElement.pause();
-                    state.isPlaying = false;
-                    updatePlayPauseUI();
-                    clearSleepTimer();
-                } else {
-                    const rMin = Math.floor(remaining / 60);
-                    const rSec = remaining % 60;
-                    sleepTimerStatusText.innerText = `${rMin}:${rSec < 10 ? '0' : ''}${rSec}`;
-                }
-            }, 1000);
-        }
-
-        function clearSleepTimer() {
-            if (state.timerInterval) clearInterval(state.timerInterval);
-            state.sleepTimerEnd = null;
-            timerBadge.classList.add('hidden');
-            sleepTimerStatusText.innerText = 'Hẹn giờ';
-        }
-
-        // --- NAVIGATION TABS ---
-        function setupNavigation() {
-            const navBtns = document.querySelectorAll('.nav-btn');
-            const tabContents = document.querySelectorAll('.tab-content');
-
-            navBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const target = btn.dataset.target;
-
-                    navBtns.forEach(b => {
-                        b.classList.remove('active', 'text-red-500');
-                        b.classList.add('text-yt-muted');
-                    });
-                    btn.classList.add('active', 'text-red-500');
-                    btn.classList.remove('text-yt-muted');
-
-                    tabContents.forEach(content => {
-                        if (content.id === target) {
-                            content.classList.remove('hidden');
-                        } else {
-                            content.classList.add('hidden');
-                        }
-                    });
-                });
-            });
-
-            document.getElementById('brandLogo').addEventListener('click', () => {
-                document.querySelector('[data-target="homeTab"]').click();
-            });
+            alert(`Đã hẹn giờ tắt nhạc sau ${minutes} phút.`);
+            sleepTimeout = setTimeout(() => {
+                audioElement.pause();
+                document.getElementById('play-pause-icon').className = "fa-solid fa-play";
+            }, minutes * 60 * 1000);
         }
     </script>
 </body>

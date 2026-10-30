@@ -2,7 +2,7 @@
   "id": "./",
   "name": "NgoThang_video",
   "short_name": "NgoThang",
-  "description": "Thư viện YouTube cá nhân với tìm kiếm, lịch sử và gợi ý theo sở thích.",
+  "description": "NgoThang_video — Khám phá và phát video YouTube, lưu nội dung yêu thích.",
   "lang": "vi-VN",
   "start_url": "./",
   "scope": "./",

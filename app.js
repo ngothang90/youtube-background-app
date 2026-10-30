@@ -6,7 +6,6 @@ const STORAGE_KEYS = {
   favorites: 'ngothang_video_favorites_v1',
   resultCache: 'ngothang_video_result_cache_v1'
 };
-const API_KEY_STORAGE = 'ngothang_video_youtube_api_key_v1';
 const VIDEO_DATA_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_SEARCHES = 25;
 const MAX_SAVED_VIDEOS = 40;
@@ -21,6 +20,7 @@ const state = {
   resultsQuery: '',
   loading: false,
   error: '',
+  errorCode: '',
   selectedVideo: null,
   installPrompt: null,
   searchRequestId: 0
@@ -146,32 +146,30 @@ function emptyState(title, message, icon = '⌕') {
   return `<div class="empty-card"><div class="empty-symbol">${icon}</div><h3>${escapeHTML(title)}</h3><p>${escapeHTML(message)}</p></div>`;
 }
 function getApiKey() {
-  try { return localStorage.getItem(API_KEY_STORAGE) || ''; }
-  catch { return ''; }
+  const key = String(window.NGOTHANG_CONFIG?.YOUTUBE_API_KEY || '').trim();
+  if (!key || key === 'PASTE_YOUR_NEW_RESTRICTED_API_KEY_HERE') return '';
+  return key;
 }
 function noticeMarkup() {
-  return `<div class="notice-card"><div class="notice-icon">ⓘ</div><div><strong>Chưa nhập YouTube API Key</strong><p>Mở Cài đặt API, dán khóa YouTube của bạn và lưu trên thiết bị này. Khóa không được ghi vào GitHub.</p><button class="text-button" type="button" data-open-settings>Nhập API Key →</button></div></div>`;
+  return `<div class="notice-card"><div class="notice-icon">ⓘ</div><div><strong>Ứng dụng chưa được cấu hình API dùng chung</strong><p>Chủ ứng dụng cần thêm YouTube API Key một lần vào file <strong>config.js</strong> trong GitHub. Sau đó tất cả mọi người mở cùng đường link đều tìm kiếm được, không phải nhập khóa riêng.</p><button class="text-button" type="button" data-open-settings>Xem cách cấu hình →</button></div></div>`;
 }
 function cardMarkup(video) {
   const thumb = safeThumbnail(video.thumbnail);
   const title = escapeHTML(video.title || 'Video YouTube');
   const channel = escapeHTML(video.channelTitle || 'Kênh YouTube');
-  const date = formatDate(video.publishedAt);
   const saved = isFavorite(video.id);
   return `<article class="video-card">
     <div class="thumb-wrap">
-      ${thumb ? `<img src="${escapeHTML(thumb)}" alt="${title}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin">` : ''}
+      ${thumb ? `<img src="${escapeHTML(thumb)}" alt="${title}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin">` : '<div class="thumb-fallback">▶</div>'}
+      <span class="thumb-source">YOUTUBE</span>
       <button class="thumb-play" type="button" data-video-id="${escapeHTML(video.id)}" aria-label="Phát ${title}"><span>▶</span></button>
+      <button class="thumb-fav ${saved ? 'saved' : ''}" type="button" data-fav-id="${escapeHTML(video.id)}" aria-label="${saved ? 'Bỏ yêu thích' : 'Thêm yêu thích'}">${saved ? '♥' : '♡'}</button>
     </div>
     <div class="video-info">
       <div class="channel-avatar" aria-hidden="true">${escapeHTML((video.channelTitle || 'Y').trim().slice(0,1).toUpperCase())}</div>
       <div class="video-copy">
         <h3 class="video-title">${title}</h3>
-        <p class="video-sub">${channel}${date ? ` · ${escapeHTML(date)}` : ''}</p>
-        <div class="card-actions">
-          <button class="mini-action ${saved ? 'saved' : ''}" type="button" data-fav-id="${escapeHTML(video.id)}">${saved ? '♥ Đã lưu' : '♡ Lưu lại'}</button>
-          <a class="mini-action" href="https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}" target="_blank" rel="noopener noreferrer">Mở YouTube ↗</a>
-        </div>
+        <p class="video-sub">${channel}</p>
       </div>
     </div>
   </article>`;
@@ -183,35 +181,57 @@ function gridMarkup(videos) {
 function chipMarkup(term) {
   return `<button class="search-chip" type="button" data-search-term="${escapeHTML(term)}"><span class="chip-symbol">⌕</span>${escapeHTML(term)}</button>`;
 }
+const HOME_CATEGORIES = [
+  { title: 'Âm nhạc', sub: 'Thư giãn · Remix · Live', emoji: '🎧', term: 'nhạc hay tuyển chọn', tone: 'music' },
+  { title: 'Công nghệ', sub: 'AI · Thiết bị · Review', emoji: '🚀', term: 'công nghệ mới AI', tone: 'tech' },
+  { title: 'Phim & giải trí', sub: 'Trailer · Hài · Show', emoji: '🍿', term: 'phim hay trailer giải trí', tone: 'movie' },
+  { title: 'Thể thao', sub: 'Bóng đá · Highlight', emoji: '⚽', term: 'bóng đá highlights', tone: 'sport' },
+  { title: 'Kiến thức', sub: 'Khám phá · Học nhanh', emoji: '🧠', term: 'kiến thức thú vị', tone: 'learn' },
+  { title: 'Du lịch', sub: 'Khám phá thế giới', emoji: '🌍', term: 'du lịch khám phá thế giới', tone: 'travel' }
+];
+function categoryMarkup(item) {
+  return `<button class="category-tile category-${item.tone}" type="button" data-search-term="${escapeHTML(item.term)}">
+    <span class="category-art" aria-hidden="true">${item.emoji}</span>
+    <span class="category-copy"><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(item.sub)}</small></span>
+    <span class="category-arrow" aria-hidden="true">↗</span>
+  </button>`;
+}
 function renderHome() {
-  const searchChips = state.searchHistory.length
-    ? state.searchHistory.slice(0, 8).map(chipMarkup).join('')
-    : ['Nhạc thư giãn', 'Nhạc Nhật Bản', 'Thiết kế CAD', 'Podcast công nghệ'].map(chipMarkup).join('');
   const latestResults = Boolean(state.resultsQuery && state.searchHistory.length && state.resultsQuery.toLocaleLowerCase() === state.searchHistory[0].toLocaleLowerCase());
+  const recentSearches = state.searchHistory.slice(0, 6).map(chipMarkup).join('');
   let recommendationBlock = '';
-  if (state.loading && state.searchHistory.length && latestResults) {
-    recommendationBlock = `<div class="section-block"><div class="section-heading"><div><h2>Đang tìm nội dung từ lần trước</h2><p>${escapeHTML(state.searchHistory[0])}</p></div></div><div class="loading-state"><span class="spinner"></span><span>Đang tải gợi ý từ YouTube...</span></div></div>`;
+  if (state.loading && latestResults) {
+    recommendationBlock = `<div class="section-block"><div class="section-heading"><h2>Dành cho bạn</h2></div><div class="loading-state"><span class="spinner"></span><span>Đang tải video...</span></div></div>`;
   } else if (latestResults && state.results.length) {
-    recommendationBlock = `<div class="section-block"><div class="section-heading"><div><h2>Tiếp tục khám phá</h2><p>Nội dung dựa trên lần tìm gần nhất: “${escapeHTML(state.resultsQuery)}”</p></div><button class="text-button" data-open-search>Đi đến kết quả →</button></div>${gridMarkup(state.results.slice(0,6))}</div>`;
+    recommendationBlock = `<div class="section-block"><div class="section-heading"><h2>Tiếp tục khám phá</h2><button class="text-button" data-open-search>Xem tất cả →</button></div>${gridMarkup(state.results.slice(0,6))}</div>`;
   } else if (state.error && state.searchHistory.length) {
-    recommendationBlock = `<div class="section-block">${state.error === 'MISSING_KEY' ? noticeMarkup() : `<div class="notice-card"><div class="notice-icon">!</div><div><strong>Chưa tải được gợi ý</strong><p>${escapeHTML(state.error)}</p></div></div>`}</div>`;
-  } else if (latestResults && !state.loading) {
-    recommendationBlock = `<div class="section-block"><div class="section-heading"><div><h2>Tiếp tục khám phá</h2><p>Không có kết quả cho “${escapeHTML(state.resultsQuery)}”. Thử một cách tìm khác nhé.</p></div></div>${emptyState('Chưa có video phù hợp', 'Thử thay đổi từ khóa tìm kiếm.', '⌕')}</div>`;
+    recommendationBlock = `<div class="section-block">${errorCardMarkup(state.error, state.errorCode)}</div>`;
   }
   const watchedBlock = state.watched.length
-    ? `<div class="section-block"><div class="section-heading"><div><h2>Đã xem gần đây</h2><p>Những video bạn đã mở trong ứng dụng</p></div><button class="text-button" data-section-link="history">Xem lịch sử →</button></div>${gridMarkup(state.watched.slice(0,6))}</div>`
-    : `<div class="section-block"><div class="section-heading"><div><h2>Bắt đầu khám phá</h2><p>Tìm một chủ đề bạn yêu thích để tạo lịch sử và gợi ý riêng.</p></div></div>${emptyState('Thư viện của bạn đang chờ', 'Tìm kiếm một video. Những chủ đề bạn quan tâm sẽ xuất hiện ở đây trong những lần mở tiếp theo.', '✦')}</div>`;
+    ? `<div class="section-block"><div class="section-heading"><h2>Đã xem gần đây</h2><button class="text-button" data-section-link="history">Xem tất cả →</button></div>${gridMarkup(state.watched.slice(0,6))}</div>`
+    : '';
   const setupBlock = !getApiKey() ? `<div class="section-block">${noticeMarkup()}</div>` : '';
-  return `<section class="hero"><div class="hero-content"><div class="hero-kicker"><span></span> THƯ VIỆN VIDEO CÁ NHÂN</div><h1>Khám phá điều bạn muốn xem.</h1><p>Một không gian riêng để tìm kiếm YouTube, lưu lại nội dung yêu thích và tiếp tục khám phá từ lịch sử trong ứng dụng này.</p></div><div class="hero-bubble" aria-hidden="true"><span></span></div></section>
+  return `<section class="hero-visual">
+      <div class="hero-visual-copy"><span class="hero-kicker"><i></i> NGOTHANG VIDEO</span><h1>Chọn mood.<br><em>Bấm phát.</em></h1><button class="hero-cta" type="button" data-focus-search>Tìm video ngay <span>→</span></button></div>
+      <div class="hero-visual-art" aria-hidden="true"><div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div><div class="hero-disc"><span>▶</span></div><div class="hero-float float-one">🎧</div><div class="hero-float float-two">🎬</div><div class="hero-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+    </section>
     ${setupBlock}
-    <section class="section-block"><div class="section-heading"><div><h2>${state.searchHistory.length ? 'Tìm lại điều bạn từng quan tâm' : 'Gợi ý để bắt đầu'}</h2><p>${state.searchHistory.length ? 'Từ khóa tìm kiếm gần đây của bạn' : 'Thử một chủ đề và xây dựng thư viện của riêng mình'}</p></div>${state.searchHistory.length ? '<button class="text-button" data-section-link="history">Tất cả lịch sử →</button>' : ''}</div><div class="chip-list">${searchChips}</div></section>
+    <section class="section-block category-section"><div class="section-heading"><h2>Khám phá theo chủ đề</h2></div><div class="category-grid">${HOME_CATEGORIES.map(categoryMarkup).join('')}</div></section>
+    ${state.searchHistory.length ? `<section class="section-block"><div class="section-heading"><h2>Tìm gần đây</h2><button class="text-button" data-section-link="history">Lịch sử →</button></div><div class="chip-list">${recentSearches}</div></section>` : ''}
     ${recommendationBlock}${watchedBlock}
-    <div class="section-block"><div class="youtube-credit"><span class="youtube-mark">▶</span> Tìm kiếm và phát bằng dịch vụ YouTube chính thức</div></div>`;
+    <div class="home-footer"><span class="youtube-mark">▶</span><span>YouTube chính thức</span></div>`;
+}
+function errorCardMarkup(message, code = '') {
+  const siteOrigin = `https://${window.location.hostname}`;
+  const referrerAdvice = /referrer|referer|forbidden|403|blocked|network_or_cors/i.test(`${message} ${code}`)
+    ? `<p class="error-next">Trong Google Cloud → Credentials → API Key → Website restrictions, thêm đúng 2 dòng này:<br><code>${escapeHTML(siteOrigin)}</code><br><code>${escapeHTML(siteOrigin)}/*</code><br>Không thêm riêng đường dẫn <code>/NgoThang_video/*</code> vì trình duyệt chỉ gửi domain gốc khi gọi Google.</p>`
+    : '<p class="error-next">Mở Google Cloud → APIs & Services → Enabled APIs để kiểm tra YouTube Data API v3 đã bật trong đúng Project. Kiểm tra thêm API restrictions và quota.</p>';
+  return `<div class="api-error-card"><div class="api-error-icon">!</div><div class="api-error-content"><strong>Không kết nối được YouTube</strong><p>${escapeHTML(message)}</p>${code ? `<code class="api-error-code">${escapeHTML(code)}</code>` : ''}${referrerAdvice}<button class="text-button" type="button" data-open-settings>Xem cài đặt API →</button></div></div>`;
 }
 function renderSearch() {
-  if (state.loading) return `<div class="page-title-row"><div><h1>Kết quả tìm kiếm</h1><p>Đang tìm “${escapeHTML(state.resultsQuery || $('#searchInput').value)}” trên YouTube.</p></div></div><div class="loading-state"><span class="spinner"></span><span>Đang tìm video...</span></div>`;
-  if (state.error) return `<div class="page-title-row"><div><h1>Kết quả tìm kiếm</h1><p>${escapeHTML(state.resultsQuery)}</p></div></div>${state.error === 'MISSING_KEY' ? noticeMarkup() : `<div class="notice-card"><div class="notice-icon">!</div><div><strong>Không thể tìm kiếm lúc này</strong><p>${escapeHTML(state.error)}</p></div></div>`}`;
-  return `<div class="page-title-row"><div><h1>Kết quả tìm kiếm</h1><p>Kết quả từ YouTube cho “${escapeHTML(state.resultsQuery)}”.</p></div><span class="youtube-credit"><span class="youtube-mark">▶</span> YouTube</span></div><div class="result-summary"><span><strong>${state.results.length}</strong> video được trả về</span><span>Ưu tiên kết quả phù hợp</span></div>${state.results.length ? gridMarkup(state.results) : emptyState('Không tìm thấy kết quả', 'Thử từ khóa ngắn hơn hoặc cách diễn đạt khác.', '⌕')}`;
+  if (state.loading) return `<div class="page-title-row"><div><h1>Kết quả</h1><p>${escapeHTML(state.resultsQuery || $('#searchInput').value)}</p></div></div><div class="loading-state"><span class="spinner"></span><span>Đang tìm video...</span></div>`;
+  if (state.error) return `<div class="page-title-row"><div><h1>Kết quả</h1><p>${escapeHTML(state.resultsQuery)}</p></div></div>${state.error === 'MISSING_KEY' ? noticeMarkup() : errorCardMarkup(state.error, state.errorCode)}`;
+  return `<div class="page-title-row"><div><h1>Kết quả tìm kiếm</h1><p>${escapeHTML(state.resultsQuery)}</p></div><span class="youtube-credit"><span class="youtube-mark">▶</span></span></div><div class="result-summary"><span><strong>${state.results.length}</strong> video</span></div>${state.results.length ? gridMarkup(state.results) : emptyState('Không tìm thấy video', 'Thử từ khóa khác nhé.', '⌕')}`;
 }
 function renderHistory() {
   const searches = state.searchHistory.length
@@ -231,6 +251,31 @@ function render() {
   else if (state.section === 'favorites') content.innerHTML = renderFavorites();
   else content.innerHTML = renderSearch();
   renderSearchSuggestions();
+}
+
+function explainYouTubeError(data, httpStatus) {
+  const apiError = data?.error || {};
+  const reason = String(apiError.errors?.[0]?.reason || apiError.status || '').trim();
+  const message = String(apiError.message || 'YouTube không trả về kết quả.');
+  const code = `HTTP ${httpStatus}${reason ? ` · ${reason}` : ''}${apiError.code ? ` · ${apiError.code}` : ''}`;
+  const probe = `${reason} ${apiError.status} ${message}`.toLowerCase();
+  let friendly = message;
+  if (/quota|daily.?limit|rate.?limit/.test(probe)) {
+    friendly = 'Project Google Cloud đã hết hạn mức tìm kiếm YouTube trong ngày. Hãy đợi quota được cấp lại hoặc kiểm tra quota trong Google Cloud.';
+  } else if (/referrer|referer|api_key_http_referrer_blocked/.test(probe)) {
+    friendly = 'Google đang chặn website do Website restrictions chưa khớp. Hãy thêm domain github.io ở cấp domain (xem hướng dẫn ngay bên dưới).';
+  } else if (/accessnotconfigured|service_disabled|youtube.*not.*enabled/.test(probe)) {
+    friendly = 'YouTube Data API v3 chưa được bật trong đúng Google Cloud Project đang chứa API Key.';
+  } else if (/keyinvalid|api_key_invalid|invalid api key/.test(probe)) {
+    friendly = 'API Key không hợp lệ hoặc đang bị thu hồi. Hãy kiểm tra lại file config.js trên GitHub.';
+  } else if (/api_key_service_blocked|service.*blocked/.test(probe)) {
+    friendly = 'API Key đang bị giới hạn không cho dùng YouTube Data API v3. Hãy sửa API restrictions.';
+  } else if (/invalidsearchfilter|invalidrelevancelanguage|badrequest/.test(probe)) {
+    friendly = 'YouTube không chấp nhận một tham số tìm kiếm. Hãy thử lại; ứng dụng đã gửi yêu cầu tìm kiếm video tiêu chuẩn.';
+  } else if (httpStatus === 403) {
+    friendly = 'Google từ chối yêu cầu (403). Thường do giới hạn referrer, giới hạn API hoặc quota. Mã lỗi bên dưới giúp xác định chính xác.';
+  }
+  return { message: friendly, code };
 }
 
 async function searchYouTube(query, { save = true, showPage = true, useCache = false } = {}) {
@@ -258,6 +303,7 @@ async function searchYouTube(query, { save = true, showPage = true, useCache = f
 
   const apiKey = getApiKey();
   state.resultsQuery = cleanQuery;
+  state.errorCode = '';
   if (!apiKey) {
     state.loading = false;
     state.error = 'MISSING_KEY';
@@ -283,7 +329,7 @@ async function searchYouTube(query, { save = true, showPage = true, useCache = f
     videoEmbeddable: 'true',
     regionCode: 'VN',
     relevanceLanguage: 'vi',
-    fields: 'items(id/videoId,snippet(title,description,channelTitle,publishedAt,thumbnails(default/url,medium/url,high/url))),nextPageToken'
+    order: 'relevance'
   });
   // YouTube Data API v3 documents the API key as the `key` request parameter.
   params.set('key', apiKey);
@@ -296,20 +342,10 @@ async function searchYouTube(query, { save = true, showPage = true, useCache = f
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const reason = data?.error?.errors?.[0]?.reason || data?.error?.status || '';
-      let message = data?.error?.message || 'YouTube chưa thể trả kết quả. Hãy kiểm tra API Key và YouTube Data API v3.';
-      if (reason === 'quotaExceeded') {
-        message = 'Bạn đã dùng hết 100 lượt tìm kiếm YouTube trong ngày. Hạn mức sẽ được làm mới theo giờ của Google.';
-      } else if (reason === 'keyInvalid' || reason === 'API_KEY_INVALID') {
-        message = 'API Key không hợp lệ. Hãy kiểm tra hoặc nhập lại khóa trong Cài đặt API.';
-      } else if (reason === 'accessNotConfigured') {
-        message = 'Bạn chưa bật YouTube Data API v3 trong Google Cloud của Project chứa API Key này.';
-      } else if (reason === 'ipRefererBlocked' || reason === 'refererNotAllowed') {
-        message = 'Domain GitHub Pages chưa được cho phép trong Website restrictions của API Key. Hãy thêm đúng địa chỉ GitHub Pages của bạn.';
-      } else if (reason === 'forbidden') {
-        message = 'Google từ chối yêu cầu. Hãy kiểm tra giới hạn API Key và YouTube Data API v3.';
-      }
-      throw new Error(message);
+      const explained = explainYouTubeError(data, response.status);
+      const error = new Error(explained.message);
+      error.code = explained.code;
+      throw error;
     }
 
     if (requestId !== state.searchRequestId) return;
@@ -327,10 +363,18 @@ async function searchYouTube(query, { save = true, showPage = true, useCache = f
     }).filter(item => item.id);
     saveResultCache(cleanQuery, state.results);
     state.error = '';
+    state.errorCode = '';
   } catch (error) {
     if (requestId !== state.searchRequestId) return;
     state.results = [];
-    state.error = error.message || 'Không thể kết nối tới YouTube. Hãy kiểm tra Internet rồi thử lại.';
+    if (error.name === 'TypeError') {
+      state.error = navigator.onLine
+        ? 'Trình duyệt không nhận được phản hồi từ Google API. Hãy kiểm tra kết nối Internet, quyền truy cập mạng và Website restrictions của API Key.'
+        : 'Thiết bị hiện không có kết nối Internet.';
+    } else {
+      state.error = error.message || 'Không thể kết nối YouTube. Hãy thử lại.';
+    }
+    state.errorCode = error.code || (error.name === 'TypeError' ? 'NETWORK_OR_CORS_ERROR' : 'UNKNOWN_ERROR');
   } finally {
     if (requestId === state.searchRequestId) {
       state.loading = false;
@@ -370,51 +414,16 @@ function clearPersonalData() {
   showToast('Đã xóa dữ liệu NgoThang_video trên thiết bị này.');
 }
 function openSettings() {
-  const input = $('#apiKeyInput');
-  const key = getApiKey();
-  input.value = '';
-  $('#apiKeyState').textContent = key
-    ? 'Đã lưu API Key trên trình duyệt này. Vì lý do bảo mật, khóa không được hiển thị lại.'
-    : 'Chưa có API Key trên thiết bị này.';
-  $('#removeApiKey').disabled = !key;
+  const configured = Boolean(getApiKey());
+  $('#apiKeyState').textContent = configured
+    ? 'Đã đọc thấy API Key trong config.js. Điều này chưa xác nhận quyền API, Website restrictions hoặc quota.'
+    : 'Chưa cấu hình API Key dùng chung. Chủ ứng dụng hãy mở file config.js trong GitHub, nhấn Edit và thay dòng giữ chỗ bằng API Key mới.';
+  $('#settingsSetupInstructions').classList.toggle('hidden', configured);
+  $('#sharedKeyWarning').classList.toggle('hidden', !configured);
   $('#settingsModal').classList.remove('hidden');
-  setTimeout(() => input.focus(), 80);
 }
 function closeSettings() {
   $('#settingsModal').classList.add('hidden');
-  $('#apiKeyInput').value = '';
-}
-function saveApiKey() {
-  const key = $('#apiKeyInput').value.trim();
-  if (!key) {
-    showToast('Bạn chưa nhập API Key.');
-    return;
-  }
-  if (key.length < 20 || /\s/.test(key)) {
-    showToast('API Key có vẻ chưa đúng. Hãy dán toàn bộ khóa, không có khoảng trắng.');
-    return;
-  }
-  try {
-    localStorage.setItem(API_KEY_STORAGE, key);
-  } catch {
-    showToast('Trình duyệt không cho phép lưu khóa. Hãy kiểm tra cài đặt bộ nhớ.');
-    return;
-  }
-  closeSettings();
-  showToast('Đã lưu API Key trên thiết bị này.');
-  if (state.error === 'MISSING_KEY' && state.resultsQuery) {
-    searchYouTube(state.resultsQuery, { save: false, showPage: true });
-  } else {
-    render();
-  }
-}
-function removeApiKey() {
-  if (!getApiKey()) return;
-  if (!window.confirm('Xóa API Key đã lưu trên trình duyệt này?')) return;
-  localStorage.removeItem(API_KEY_STORAGE);
-  closeSettings();
-  render();
-  showToast('Đã xóa API Key khỏi thiết bị này.');
 }
 
 function showInstallHelp() {
@@ -450,6 +459,7 @@ $('#pageContent').addEventListener('click', event => {
   if (target.dataset.section) { setSection(target.dataset.section); return; }
   if (target.dataset.sectionLink) { setSection(target.dataset.sectionLink); return; }
   if (target.hasAttribute('data-open-search')) { setSection('search'); return; }
+  if (target.hasAttribute('data-focus-search')) { $('#searchInput').focus(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
   if (target.hasAttribute('data-open-settings')) { openSettings(); return; }
   if (target.dataset.searchTerm) { searchYouTube(target.dataset.searchTerm, { useCache: true }); return; }
   if (target.dataset.videoId) { openPlayer(target.dataset.videoId); return; }
@@ -463,10 +473,7 @@ $('#pageContent').addEventListener('click', event => {
 document.querySelectorAll('[data-section]').forEach(button => button.addEventListener('click', () => setSection(button.dataset.section)));
 $('#settingsButton').addEventListener('click', openSettings);
 $('#closeSettings').addEventListener('click', closeSettings);
-$('#saveApiKey').addEventListener('click', saveApiKey);
-$('#removeApiKey').addEventListener('click', removeApiKey);
 $('#settingsModal').addEventListener('click', event => { if (event.target === $('#settingsModal')) closeSettings(); });
-$('#apiKeyInput').addEventListener('keydown', event => { if (event.key === 'Enter') saveApiKey(); });
 $('#closePlayer').addEventListener('click', closePlayer);
 $('#playerModal').addEventListener('click', event => { if (event.target === $('#playerModal')) closePlayer(); });
 $('#closeInstall').addEventListener('click', () => $('#installModal').classList.add('hidden'));

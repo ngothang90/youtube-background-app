@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111318">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta name="description" content="NgoThang_video — thư viện YouTube cá nhân với tìm kiếm, lịch sử và gợi ý theo sở thích.">
+  <meta name="description" content="NgoThang_video — tìm kiếm YouTube, khám phá theo chủ đề, lịch sử và video yêu thích.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="NgoThang_video">
@@ -29,11 +29,7 @@
         <button class="nav-item" data-section="favorites"><span class="nav-icon">♡</span><span>Yêu thích</span></button>
       </nav>
       <div class="sidebar-divider"></div>
-      <div class="sidebar-note">
-        <div class="note-icon">✦</div>
-        <strong>Không gian nội dung riêng</strong>
-        <p>Lưu lại điều bạn quan tâm và khám phá tiếp từ lịch sử tìm kiếm của mình.</p>
-      </div>
+      <div class="sidebar-art-card" aria-hidden="true"><span>✦</span><strong>PLAY<br>YOUR<br>MOOD</strong><i>♪</i></div>
       <div class="sidebar-bottom">
         <button class="install-button" id="installButton"><span>⇩</span> Cài ứng dụng</button>
         <a class="privacy-link" href="./privacy.html">Quyền riêng tư & dữ liệu</a>
@@ -48,7 +44,7 @@
           <span class="search-icon" aria-hidden="true">⌕</span>
           <input id="searchInput" type="search" list="searchSuggestions" maxlength="120" placeholder="Tìm video, âm nhạc, kiến thức..." autocomplete="off" aria-label="Tìm kiếm YouTube">
           <datalist id="searchSuggestions"></datalist>
-          <button type="submit" class="search-submit">Tìm kiếm</button>
+          <button type="submit" class="search-submit" aria-label="Tìm kiếm" title="Tìm kiếm">⌕</button>
         </form>
         <div class="top-actions">
           <button class="settings-button" id="settingsButton" aria-label="Cài đặt YouTube API" title="Cài đặt API">⚙</button>
@@ -95,20 +91,23 @@
         <div><span class="eyebrow">CẤU HÌNH YOUTUBE</span><h2 id="settingsTitle">Cài đặt API Key</h2></div>
         <button class="icon-button" id="closeSettings" aria-label="Đóng">×</button>
       </div>
-      <p class="settings-description">Dán YouTube API Key của bạn vào đây. Khóa chỉ lưu trong trình duyệt trên thiết bị này, không được ghi vào mã nguồn GitHub. Khi dùng thiết bị khác, bạn cần nhập khóa lại.</p>
-      <label class="settings-label" for="apiKeyInput">YouTube API Key</label>
-      <input class="api-key-input" id="apiKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="Dán API Key vào đây">
-      <div class="api-key-state" id="apiKeyState"></div>
-      <div class="settings-actions">
-        <button class="clear-button" id="removeApiKey" type="button">Xóa khóa</button>
-        <button class="primary-button" id="saveApiKey" type="button">Lưu API Key</button>
+      <p class="settings-description">NgoThang_video dùng một API Key chung do chủ ứng dụng cấu hình. Bạn, vợ bạn và những người mở cùng đường link sẽ dùng chung khóa; không cần nhập API trên từng thiết bị.</p>
+      <div class="api-key-state" id="apiKeyState" role="status"></div>
+      <div id="settingsSetupInstructions" class="notice-card settings-instructions">
+        <div class="notice-icon">ⓘ</div><div><strong>Cách cấu hình một lần</strong>
+          <ol><li>Mở repository GitHub của NgoThang_video.</li><li>Mở file <strong>config.js</strong> và nhấn biểu tượng bút chì (Edit).</li><li>Thay nội dung giữ chỗ trong dòng <code>YOUTUBE_API_KEY</code> bằng API Key mới của bạn, giữ nguyên dấu ngoặc kép.</li><li>Nhấn <strong>Commit changes</strong>. Sau khi GitHub Pages cập nhật, tất cả người dùng đều dùng được.</li></ol>
+        </div>
       </div>
-      <p class="settings-footnote">Khuyên dùng: giới hạn khóa trong Google Cloud chỉ cho YouTube Data API v3 và chỉ cho phép domain GitHub Pages của bạn.</p>
+      <div id="sharedKeyWarning" class="notice-card settings-instructions hidden">
+        <div class="notice-icon">!</div><div><strong>Lưu ý về quyền riêng tư</strong><p>Vì chỉ dùng GitHub Pages, API Key chung được gửi tới trình duyệt và người truy cập có thể xem được. Hãy giới hạn khóa chỉ cho YouTube Data API v3 và Website restrictions của domain GitHub Pages. Không dùng khóa này cho dịch vụ khác.</p></div>
+      </div>
+      <p class="settings-footnote">Mở Google Cloud để kiểm tra giới hạn khóa. Không sử dụng lại API Key đã gửi trong chat trước đây.</p>
       <a class="settings-help" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Mở Google Cloud Credentials ↗</a>
     </div>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="./config.js?v=0.5.0"></script>
   <script src="./app.js" defer></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 /* GitHub Pages-compatible service worker. Uses the repository subfolder as its base. */
 'use strict';
 const BASE_URL = new URL('./', self.location.href);
-const CACHE_NAME = 'ngothang-video-github-v3';
+const CACHE_NAME = 'ngothang-video-github-v5';
 const SHELL_PATHS = [
   './', './index.html', './styles.css', './app.js', './manifest.webmanifest',
   './offline.html', './privacy.html', './BAT_DAU_NHANH.html',
@@ -18,6 +18,8 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin || !url.pathname.startsWith(BASE_URL.pathname)) return;
+  // The shared API config must not be cached by this service worker.
+  if (url.pathname.endsWith('/config.js')) return;
   if (url.pathname.endsWith('/privacy.html')) return;
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).then(response => {

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111318">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="description" content="NgoThang_video — thư viện YouTube cá nhân với tìm kiếm, lịch sử và gợi ý theo sở thích.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NgoThang_video">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png">
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="./styles.css">
+  <title>NgoThang_video</title>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Điều hướng chính">
+      <a class="brand" href="./" aria-label="NgoThang video trang chủ">
+        <span class="brand-mark"><span></span></span>
+        <span class="brand-name">NgoThang<span>_video</span></span>
+      </a>
+      <div class="sidebar-label">KHÔNG GIAN CỦA BẠN</div>
+      <nav class="side-nav">
+        <button class="nav-item active" data-section="home"><span class="nav-icon">⌂</span><span>Trang chủ</span></button>
+        <button class="nav-item" data-section="history"><span class="nav-icon">◷</span><span>Lịch sử</span></button>
+        <button class="nav-item" data-section="favorites"><span class="nav-icon">♡</span><span>Yêu thích</span></button>
+      </nav>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-note">
+        <div class="note-icon">✦</div>
+        <strong>Không gian nội dung riêng</strong>
+        <p>Lưu lại điều bạn quan tâm và khám phá tiếp từ lịch sử tìm kiếm của mình.</p>
+      </div>
+      <div class="sidebar-bottom">
+        <button class="install-button" id="installButton"><span>⇩</span> Cài ứng dụng</button>
+        <a class="privacy-link" href="./privacy.html">Quyền riêng tư & dữ liệu</a>
+        <div class="sidebar-foot">Nội dung video được cung cấp bởi YouTube.</div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="brand-mark"><span></span></span><span class="brand-name">NgoThang<span>_video</span></span></div>
+        <form class="search-form" id="searchForm" role="search">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input id="searchInput" type="search" list="searchSuggestions" maxlength="120" placeholder="Tìm video, âm nhạc, kiến thức..." autocomplete="off" aria-label="Tìm kiếm YouTube">
+          <datalist id="searchSuggestions"></datalist>
+          <button type="submit" class="search-submit">Tìm kiếm</button>
+        </form>
+        <div class="top-actions">
+          <button class="settings-button" id="settingsButton" aria-label="Cài đặt YouTube API" title="Cài đặt API">⚙</button>
+          <button class="top-install" id="topInstallButton" aria-label="Cài ứng dụng" title="Cài ứng dụng">⇩</button>
+        </div>
+      </header>
+
+      <section class="page-content" id="pageContent" aria-live="polite">
+        <div class="loading-state"><span class="spinner"></span><span>Đang chuẩn bị thư viện của bạn...</span></div>
+      </section>
+
+      <footer class="mobile-footer">
+        <button class="mobile-nav active" data-section="home"><span>⌂</span><small>Trang chủ</small></button>
+        <button class="mobile-nav" data-section="history"><span>◷</span><small>Lịch sử</small></button>
+        <button class="mobile-nav" data-section="favorites"><span>♡</span><small>Yêu thích</small></button>
+        <a class="mobile-nav" href="./privacy.html"><span>⋯</span><small>Thêm</small></a>
+      </footer>
+    </main>
+  </div>
+
+  <div class="modal-backdrop hidden" id="playerModal" role="dialog" aria-modal="true" aria-label="Trình phát YouTube">
+    <div class="player-dialog">
+      <div class="player-topline">
+        <div class="player-brand"><span class="youtube-mark">▶</span><span>Trình phát YouTube chính thức</span></div>
+        <button class="icon-button close-player" id="closePlayer" aria-label="Đóng trình phát">×</button>
+      </div>
+      <div class="player-frame-wrap" id="playerFrameWrap"></div>
+      <div class="player-meta" id="playerMeta"></div>
+      <div class="player-bottom-note">Video được phát bằng trình phát YouTube. Theo chính sách YouTube, video không tiếp tục phát nền khi ứng dụng bị thu nhỏ hoặc đóng.</div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="installModal" role="dialog" aria-modal="true" aria-labelledby="installTitle">
+    <div class="small-dialog">
+      <div class="dialog-header"><div><span class="eyebrow">CÀI ĐẶT ỨNG DỤNG</span><h2 id="installTitle">Đưa NgoThang_video ra màn hình chính</h2></div><button class="icon-button" id="closeInstall" aria-label="Đóng">×</button></div>
+      <div id="installInstructions" class="install-instructions"></div>
+      <button class="primary-button full-button" id="confirmInstall">Đã hiểu</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="small-dialog">
+      <div class="dialog-header">
+        <div><span class="eyebrow">CẤU HÌNH YOUTUBE</span><h2 id="settingsTitle">Cài đặt API Key</h2></div>
+        <button class="icon-button" id="closeSettings" aria-label="Đóng">×</button>
+      </div>
+      <p class="settings-description">Dán YouTube API Key của bạn vào đây. Khóa chỉ lưu trong trình duyệt trên thiết bị này, không được ghi vào mã nguồn GitHub. Khi dùng thiết bị khác, bạn cần nhập khóa lại.</p>
+      <label class="settings-label" for="apiKeyInput">YouTube API Key</label>
+      <input class="api-key-input" id="apiKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="Dán API Key vào đây">
+      <div class="api-key-state" id="apiKeyState"></div>
+      <div class="settings-actions">
+        <button class="clear-button" id="removeApiKey" type="button">Xóa khóa</button>
+        <button class="primary-button" id="saveApiKey" type="button">Lưu API Key</button>
+      </div>
+      <p class="settings-footnote">Khuyên dùng: giới hạn khóa trong Google Cloud chỉ cho YouTube Data API v3 và chỉ cho phép domain GitHub Pages của bạn.</p>
+      <a class="settings-help" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Mở Google Cloud Credentials ↗</a>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="./app.js" defer></script>
+</body>
+</html>

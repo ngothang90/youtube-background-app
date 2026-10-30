@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="vi">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#111318"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./styles.css"><title>Quyền riêng tư – NgoThang_video</title></head>
+<body>
+  <main class="privacy-page">
+    <a class="back-link" href="./">← Quay lại NgoThang_video</a>
+    <h1>Quyền riêng tư & dữ liệu</h1>
+    <p class="updated">Bản đầu · 30/10/2026</p>
+    <h2>1. Dữ liệu được lưu</h2>
+    <p>NgoThang_video lưu các từ khóa tìm kiếm, danh sách video đã mở, video yêu thích và một số kết quả tìm kiếm gần đây trong bộ nhớ của trình duyệt trên thiết bị hiện tại. Bản đầu không yêu cầu tạo tài khoản và không đồng bộ dữ liệu giữa các thiết bị.</p>
+    <h2>2. Dịch vụ YouTube</h2>
+    <p>Khi bạn tìm kiếm, trình duyệt gửi yêu cầu trực tiếp đến YouTube Data API v3 bằng API Key do bạn nhập trong Cài đặt API. Khóa được lưu trong bộ nhớ cục bộ của trình duyệt trên thiết bị hiện tại, không được ghi vào repository GitHub và không đồng bộ sang thiết bị khác. Do YouTube Data API yêu cầu tham số `key`, khóa sẽ xuất hiện trong thông tin request của trình duyệt; hãy bảo vệ thiết bị và giới hạn API Key theo domain. Khi bạn chọn phát video, video được tải từ trình phát nhúng chính thức của YouTube. Việc sử dụng YouTube chịu sự điều chỉnh bởi điều khoản và chính sách quyền riêng tư của Google/YouTube.</p>
+    <h2>3. Thời hạn lưu dữ liệu</h2>
+    <p>Lịch sử từ khóa do bạn nhập được lưu cho đến khi bạn xóa dữ liệu trình duyệt hoặc dùng chức năng xóa dữ liệu trong ứng dụng. Thông tin video lấy từ YouTube như tiêu đề, ảnh thu nhỏ và mã video được lưu cục bộ trong thời hạn tối đa 30 ngày, sau đó ứng dụng tự loại bỏ.</p>
+    <h2>4. Xóa dữ liệu</h2>
+    <p>Bạn có thể xóa dữ liệu cá nhân trong mục Lịch sử của ứng dụng. Thao tác này chỉ xóa dữ liệu NgoThang_video trên thiết bị hiện tại, không xóa lịch sử trên tài khoản YouTube hoặc dữ liệu Google lưu trữ.</p>
+    <div class="privacy-panel"><strong>Xóa dữ liệu trên thiết bị này</strong><p>Nhấn nút bên dưới để xóa lịch sử tìm kiếm, video đã mở, video yêu thích, cache và API Key lưu trong NgoThang_video.</p><button class="primary-button" id="deleteData">Xóa dữ liệu NgoThang_video</button></div>
+    <h2>5. Liên hệ và cập nhật</h2>
+    <p>API Key của bạn được lưu trong localStorage của trình duyệt. Người có quyền truy cập vào hồ sơ trình duyệt/thiết bị có thể có khả năng đọc dữ liệu này. Hãy giới hạn khóa trong Google Cloud chỉ cho YouTube Data API v3 và giới hạn HTTP referrer cho đúng domain GitHub Pages. Trước khi phát hành công khai, chủ sở hữu ứng dụng cần bổ sung thông tin liên hệ, đơn vị vận hành và rà soát lại chính sách theo cách triển khai thực tế.</p>
+  </main>
+  <script>
+    document.getElementById('deleteData').addEventListener('click', () => {
+      if (!confirm('Xóa toàn bộ dữ liệu NgoThang_video đã lưu trong trình duyệt này?')) return;
+      ['ngothang_video_searches_v1','ngothang_video_watched_v1','ngothang_video_favorites_v1','ngothang_video_result_cache_v1','ngothang_video_youtube_api_key_v1'].forEach(key => localStorage.removeItem(key));
+      alert('Đã xóa dữ liệu NgoThang_video trên thiết bị này.');
+      location.href = './';
+    });
+  </script>
+</body>
+</html>

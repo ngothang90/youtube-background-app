@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Hướng dẫn cài đặt NgoThang_video</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#18202b;background:#f4f6f9;line-height:1.65;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0;padding:28px 16px 60px}.wrap{width:min(100%,850px);margin:auto}.top{background:#141a25;color:#fff;border-radius:22px;padding:28px 30px;margin-bottom:20px}.tag{font-size:11px;letter-spacing:.13em;color:#aab8ce;font-weight:800}.top h1{font-size:30px;line-height:1.2;margin:8px 0}.top p{color:#c8d0dd;margin:8px 0 0}.card{background:#fff;border:1px solid #e2e7ef;border-radius:17px;padding:22px 24px;margin:14px 0;box-shadow:0 8px 28px #1d2b3b08}.step{display:flex;gap:14px;align-items:flex-start}.num{width:34px;height:34px;flex:0 0 34px;border-radius:11px;background:#edf2ff;color:#315bc7;display:grid;place-items:center;font-weight:850}.card h2{font-size:18px;line-height:1.35;margin:2px 0 10px}.card p,.card li{font-size:14px;color:#4e596a}.card ul,.card ol{padding-left:21px}.card li{margin:5px 0}.btn{display:inline-flex;align-items:center;gap:7px;margin:6px 7px 2px 0;padding:9px 13px;border-radius:10px;background:#182338;color:#fff;text-decoration:none;font-size:13px;font-weight:750}.btn.alt{background:#edf2ff;color:#2449a8}.note{border-left:4px solid #d59629;background:#fff8e8;padding:12px 14px;border-radius:8px;color:#654b18;font-size:13px;margin:12px 0}.good{border-left:4px solid #16966b;background:#ebfaf4;padding:12px 14px;border-radius:8px;color:#176447;font-size:13px;margin:12px 0}.code{padding:12px 14px;border-radius:10px;background:#111827;color:#e4ebf5;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:13px;overflow:auto}.field{display:grid;grid-template-columns:110px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid #edf0f4;font-size:13px}.field:last-child{border:0}.field b{color:#202c3c}.muted{font-size:12px;color:#788394}.footer{color:#8490a1;font-size:12px;text-align:center;margin-top:25px}a{color:#315bc7}strong{color:#273448}@media(max-width:560px){body{padding:14px 11px 40px}.top{padding:23px 20px}.top h1{font-size:25px}.card{padding:18px 17px}.field{grid-template-columns:1fr;gap:1px}}
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <div class="tag">NGOTHANG_VIDEO · PHIÊN BẢN 0.2.0</div>
+    <h1>Hướng dẫn đưa ứng dụng lên mạng</h1>
+    <p>Làm theo từng bước. Bạn không cần sửa code và không cần cài phần mềm lập trình.</p>
+  </header>
+
+  <section class="card">
+    <div class="step"><div class="num">1</div><div><h2>Trước tiên: thay API Key bạn đã gửi trong cuộc trò chuyện</h2>
+      <p>Vì mã trước đã được chia sẻ trong chat, hãy coi nó là mã đã lộ. Trong Google Cloud Console, mở APIs & Services → Credentials, chọn key cũ và xóa/rotate key đó. Tạo một API Key mới cho NgoThang_video. Không gửi key mới vào chat và không ghi key vào file ZIP.</p>
+      <a class="btn" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Mở Google Cloud Credentials ↗</a>
+      <a class="btn alt" href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">YouTube Data API v3 ↗</a>
+      <ol>
+        <li>Đảm bảo YouTube Data API v3 đã được bật.</li>
+        <li>Vào Credentials và tạo API Key mới.</li>
+        <li>Trong API restrictions, chọn <strong>Restrict key</strong> và chỉ bật <strong>YouTube Data API v3</strong>.</li>
+        <li>Vì key được dùng ở server Vercel, không đặt Website/HTTP referrer restriction. Chỉ đặt IP restriction nếu bạn có IP egress tĩnh của máy chủ.</li>
+      </ol>
+      <div class="note">Giữ API Key mới ở nơi riêng tư. Khi đến bước 4, bạn sẽ dán key vào Vercel. Không dán vào README, JavaScript, HTML hoặc GitHub.</div>
+    </div></div>
+  </section>
+
+  <section class="card">
+    <div class="step"><div class="num">2</div><div><h2>Tạo nơi lưu mã nguồn trên GitHub</h2>
+      <p>GitHub sẽ lưu các file ứng dụng. Tạo một repository mới, tên đúng như sau:</p>
+      <div class="code">NgoThang_video</div>
+      <ol>
+        <li>Đăng nhập GitHub.</li>
+        <li>Nhấn New repository.</li>
+        <li>Nhập tên <strong>NgoThang_video</strong>.</li>
+        <li>Chọn <strong>Private</strong> để giữ mã nguồn riêng tư trong giai đoạn thử nghiệm.</li>
+        <li>Nhấn Create repository.</li>
+        <li>Giải nén file ZIP NgoThang_video_v0.2.0.zip trên máy tính. Mở thư mục NgoThang_video bên trong, chọn toàn bộ file và thư mục con rồi tải lên repository bằng Add file → Upload files.</li>
+        <li>Nhấn Commit changes để lưu.</li>
+      </ol>
+      <div class="note">Chỉ tải file trong thư mục dự án đã giải nén. Không tạo file `.env.local` và không tải API Key lên GitHub. File mẫu `.env.example` không chứa key thật.</div>
+      <a class="btn" href="https://github.com/new" target="_blank" rel="noopener">Tạo repository GitHub ↗</a>
+    </div></div>
+  </section>
+
+  <section class="card">
+    <div class="step"><div class="num">3</div><div><h2>Đưa repository GitHub lên Vercel</h2>
+      <ol>
+        <li>Mở Vercel và đăng nhập bằng GitHub.</li>
+        <li>Nếu được hỏi, cho phép Vercel truy cập repository <strong>NgoThang_video</strong>.</li>
+        <li>Ở trang Add New → Project, tìm repository NgoThang_video rồi nhấn Import.</li>
+        <li>Trong phần cấu hình, để Framework Preset là <strong>Other</strong>, Root Directory là <strong>./</strong>.</li>
+        <li>Không cần Build Command; không cần Output Directory. Giữ các thiết lập mặc định còn lại.</li>
+        <li>Nhấn Deploy. Đợi Vercel tạo domain dạng `...vercel.app`.</li>
+      </ol>
+      <a class="btn" href="https://vercel.com/new" target="_blank" rel="noopener">Mở Vercel – New Project ↗</a>
+    </div></div>
+  </section>
+
+  <section class="card">
+    <div class="step"><div class="num">4</div><div><h2>Thêm API Key vào đúng vị trí trong Vercel</h2>
+      <p>Trong Vercel Dashboard, mở project NgoThang_video → Settings → Environment Variables → Add New.</p>
+      <div class="field"><b>Name</b><span class="code">YOUTUBE_API_KEY</span></div>
+      <div class="field"><b>Value</b><span>Dán API Key mới lấy từ Google Cloud vào ô này. Không gửi key qua chat.</span></div>
+      <div class="field"><b>Environment</b><span>Chọn <strong>Production</strong>. Chọn thêm Preview nếu muốn kiểm tra bản thử.</span></div>
+      <p>Nhấn Save. Sau đó vào Deployments, chọn deployment mới nhất và nhấn nút ba chấm → Redeploy. Có thể bỏ chọn “Use existing Build Cache” nếu giao diện Vercel hiển thị tùy chọn này.</p>
+      <div class="good">Đây là bước duy nhất bạn cần dán API Key. Code đã đọc biến YOUTUBE_API_KEY ở máy chủ; key không được gửi xuống trình duyệt.</div>
+      <a class="btn" href="https://vercel.com/dashboard" target="_blank" rel="noopener">Mở Vercel Dashboard ↗</a>
+    </div></div>
+  </section>
+
+  <section class="card">
+    <div class="step"><div class="num">5</div><div><h2>Kiểm tra app đã nhận API Key chưa</h2>
+      <p>Thay `TEN-DU-AN` bằng domain Vercel của bạn rồi mở đường dẫn kiểm tra sau:</p>
+      <div class="code">https://TEN-DU-AN.vercel.app/api/health</div>
+      <p>Nếu cấu hình đã được nhận, bạn sẽ thấy kết quả gần giống:</p>
+      <div class="code">{"ok":true,"app":"NgoThang_video","youtubeApiKeyConfigured":true}</div>
+      <p>Đây chỉ kiểm tra biến môi trường đã có mặt, không tiết lộ key và chưa xác nhận key có quyền gọi YouTube. Tiếp theo mở trang chính, tìm thử `nhạc thư giãn`.</p>
+      <div class="good">Hoàn tất khi bạn thấy danh sách video và nhấn vào ảnh video để phát bằng YouTube Player chính thức.</div>
+    </div></div>
+  </section>
+
+  <section class="card">
+    <h2>Xử lý lỗi thường gặp</h2>
+    <ul>
+      <li><strong>youtubeApiKeyConfigured: false:</strong> tên biến phải chính xác là `YOUTUBE_API_KEY`; kiểm tra đã Save và chọn Production; sau đó Redeploy.</li>
+      <li><strong>API Key không hợp lệ:</strong> kiểm tra không dán thừa dấu cách, dùng key mới và thử lại.</li>
+      <li><strong>accessNotConfigured:</strong> bật YouTube Data API v3 trong đúng Google Cloud Project chứa API Key.</li>
+      <li><strong>ipRefererBlocked:</strong> xem lại Application restrictions; không dùng HTTP referrer restriction cho request server-side Vercel.</li>
+      <li><strong>quotaExceeded:</strong> đã hết hạn mức tìm kiếm hàng ngày của YouTube Data API. Đợi hạn mức được làm mới hoặc kiểm tra hạn mức trong Google Cloud.</li>
+      <li><strong>Video không phát trong khung:</strong> một số chủ video không cho nhúng hoặc có giới hạn khu vực/độ tuổi. Bấm “Mở YouTube” trên thẻ video.</li>
+    </ul>
+    <div class="note">YouTube Data API mặc định có 100 lượt gọi `search.list` mỗi ngày. App dùng cache để giảm số lần gọi; mỗi lần bạn chủ động tìm kiếm mới có thể tiêu thụ một lượt.</div>
+  </section>
+
+  <section class="card">
+    <h2>Cài app trên điện thoại sau khi website chạy</h2>
+    <p><strong>iPhone:</strong> mở domain bằng Safari → Chia sẻ → Thêm vào màn hình chính → bật “Mở dưới dạng ứng dụng web” nếu tùy chọn này hiện ra → Thêm.</p>
+    <p><strong>Android:</strong> mở domain bằng Chrome → menu ⋮ → Cài đặt ứng dụng / Add to Home screen.</p>
+    <p><strong>Máy tính:</strong> dùng biểu tượng Install trên thanh địa chỉ hoặc menu trình duyệt.</p>
+    <p class="muted">PWA vẫn dùng trình phát YouTube chính thức; video YouTube không được app tiếp tục phát nền khi bị thu nhỏ/đóng. Mở biểu tượng app sẽ không hiện thanh địa chỉ trình duyệt nếu trình duyệt/hệ điều hành cài web app ở chế độ standalone.</p>
+  </section>
+  <div class="footer">NgoThang_video · Hướng dẫn cho bản 0.2.0 · Không đặt API Key thật trong mã nguồn</div>
+</main>
+</body>
+</html>

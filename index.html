@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Tube Player PWA</title>
 
-  <!-- Cấu hình PWA để chạy độc lập không qua Safari/Chrome bar -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TubePlayer">
@@ -13,7 +12,6 @@
   
   <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png">
 
-  <!-- Dynamic Web App Manifest Generator -->
   <script>
     const manifest = {
       "name": "Tube Player",
@@ -22,21 +20,12 @@
       "display": "standalone",
       "background_color": "#0f0f0f",
       "theme_color": "#0f0f0f",
-      "icons": [
-        {
-          "src": "https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png",
-          "sizes": "512x512",
-          "type": "image/png",
-          "purpose": "any maskable"
-        }
-      ]
+      "icons": [{ "src": "https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png", "sizes": "512x512", "type": "image/png" }]
     };
-    const stringManifest = JSON.stringify(manifest);
-    const blob = new Blob([stringManifest], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(blob);
+    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
     const link = document.createElement('link');
     link.rel = 'manifest';
-    link.href = manifestURL;
+    link.href = URL.createObjectURL(blob);
     document.head.appendChild(link);
   </script>
 
@@ -47,8 +36,8 @@
     input[type="text"] { flex: 1; background: #222; border: 1px solid #333; color: #fff; padding: 10px 14px; border-radius: 20px; font-size: 15px; outline: none; }
     input[type="text"]:focus { border-color: #ff0000; }
     button.btn-search { background: #ff0000; color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-    
-    .section-title { font-size: 16px; font-weight: bold; margin: 16px 16px 8px 16px; color: #aaa; }
+
+    .section-title { font-size: 15px; font-weight: bold; margin: 16px 16px 8px 16px; color: #aaa; }
     .history-chips { display: flex; gap: 8px; padding: 0 16px 12px 16px; overflow-x: auto; scrollbar-width: none; }
     .history-chips::-webkit-scrollbar { display: none; }
     .chip { background: #272727; color: #eee; padding: 6px 14px; border-radius: 16px; font-size: 13px; white-space: nowrap; cursor: pointer; border: 1px solid #3d3d3d; }
@@ -61,13 +50,13 @@
     .video-title { font-size: 14px; font-weight: 500; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #fff; }
     .video-channel { font-size: 12px; color: #aaa; margin-top: 4px; }
     
-    /* Player cố định phía dưới để nghe nhạc nền */
+    .error-box { background: #3a0d0d; border: 1px solid #f44336; color: #ffcdd2; padding: 12px; border-radius: 8px; font-size: 13px; margin: 16px; line-height: 1.4; word-break: break-word; }
+
     .player-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; background: #212121; border-top: 1px solid #333; display: flex; align-items: center; padding: 0 12px; gap: 12px; z-index: 1000; }
     .player-thumb { width: 50px; height: 50px; border-radius: 6px; object-fit: cover; }
     .player-details { flex: 1; overflow: hidden; }
     .player-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .player-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
-    .player-controls { display: flex; gap: 10px; }
     .btn-play { background: #ff0000; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
     
     #youtube-iframe-container { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; overflow: hidden; left: -9999px; }
@@ -85,7 +74,8 @@
     <div class="history-chips" id="historyChips"></div>
   </div>
 
-  <div class="section-title" id="gridTitle">🔥 Đề xuất nổi bật</div>
+  <div class="section-title" id="gridTitle">🔥 Kết quả tìm kiếm</div>
+  <div id="errorDisplay"></div>
   <div class="video-grid" id="videoGrid"></div>
 
   <!-- Player Bar -->
@@ -95,9 +85,7 @@
       <div id="pTitle" class="player-title">Đang tải...</div>
       <div id="pSub" class="player-sub">Đang phát nền</div>
     </div>
-    <div class="player-controls">
-      <button class="btn-play" id="playBtn" onclick="togglePlay()">▶</button>
-    </div>
+    <button class="btn-play" id="playBtn" onclick="togglePlay()">▶</button>
   </div>
 
   <div id="youtube-iframe-container">
@@ -108,25 +96,20 @@
 
   <script>
     // -------------------------------------------------------------
-    // DÒNG 218: ĐIỀN API KEY MẶC ĐỊNH CỦA BẠN VÀO GIỮA 2 DẤU NHÁY ĐƠN ''
+    // DÒNG 99: ĐIỀN API KEY CỦA BẠN VÀO GIỮA 2 DẤU NHÁY ĐƠN ''
     // -------------------------------------------------------------
-    const DEFAULT_API_KEY =AIzaSyAc0rtaQga_-CdRwkltei5rBX-GQqyZLt8;
+    const DEFAULT_API_KEY = 'AIzaSyAc0rtaQga_-CdRwkltei5rBX-GQqyZLt8';
 
     let player = null;
     let isPlaying = false;
     let currentVideo = null;
 
     const urlParams = new URLSearchParams(window.location.search);
-    let apiKey = urlParams.get('key') || localStorage.getItem('yt_api_key') || DEFAULT_API_KEY;
-    
-    if (apiKey && apiKey !== 'ĐIỀN_API_KEY_CỦA_BẠN_VÀO_ĐÂY') {
-      localStorage.setItem('yt_api_key', apiKey);
-    }
+    let apiKey = urlParams.get('key') || DEFAULT_API_KEY;
 
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('ytplayer', {
-        height: '200',
-        width: '200',
+        height: '200', width: '200',
         playerVars: { 'playsinline': 1, 'controls': 0, 'autoplay': 0 },
         events: { 'onStateChange': onPlayerStateChange }
       });
@@ -176,8 +159,10 @@
     }
 
     async function searchYouTube(query) {
+      document.getElementById('errorDisplay').innerHTML = '';
+      
       if (!apiKey || apiKey === 'ĐIỀN_API_KEY_CỦA_BẠN_VÀO_ĐÂY') {
-        alert('⚠️ Vui lòng điền YouTube API Key vào mã nguồn hoặc đường link!');
+        showError('Chưa có API Key! Vui lòng điền API Key vào dòng 99 trong file index.html');
         return;
       }
 
@@ -193,16 +178,19 @@
         const data = await res.json();
 
         if (data.error) {
-          alert('Lỗi YouTube API: ' + data.error.message);
-          document.getElementById('videoGrid').innerHTML = `<div style="color:#ff6b6b;text-align:center;padding:20px;">Lỗi: ${data.error.message}</div>`;
+          showError(`Lỗi Google API (${data.error.code}): ${data.error.message}`);
+          document.getElementById('videoGrid').innerHTML = '';
           return;
         }
 
         renderVideos(data.items);
       } catch (err) {
-        alert('Lỗi kết nối mạng!');
-        document.getElementById('videoGrid').innerHTML = '<div style="color:#ff6b6b;text-align:center;padding:20px;">Không thể kết nối tới YouTube API.</div>';
+        showError('Lỗi kết nối mạng!');
       }
+    }
+
+    function showError(msg) {
+      document.getElementById('errorDisplay').innerHTML = `<div class="error-box">⚠️ <b>Thông báo:</b> ${msg}</div>`;
     }
 
     function renderVideos(items) {
@@ -278,11 +266,9 @@
       });
     }
 
-    // Tự động load đề xuất sẵn ngay khi vào trang
     window.onload = () => {
       renderHistory();
       const history = getHistory();
-      // Nếu có lịch sử cũ thì gợi ý theo lịch sử, nếu chưa thì hiển thị chủ đề Nhạc nhẹ thư giãn sẵn
       const defaultQuery = history.length > 0 ? history[0] : 'Nhạc lofi chill thư giãn';
       document.getElementById('searchInput').value = defaultQuery;
       searchYouTube(defaultQuery);

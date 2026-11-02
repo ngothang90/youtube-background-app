@@ -52,13 +52,16 @@
     
     .error-box { background: #3a0d0d; border: 1px solid #f44336; color: #ffcdd2; padding: 12px; border-radius: 8px; font-size: 13px; margin: 16px; line-height: 1.4; word-break: break-word; }
 
-    /* Player Bar cố định phía dưới */
+    /* Player Bar */
     .player-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; background: #212121; border-top: 1px solid #333; display: flex; align-items: center; padding: 0 12px; gap: 12px; z-index: 1000; }
     .player-thumb { width: 50px; height: 50px; border-radius: 6px; object-fit: cover; }
     .player-details { flex: 1; overflow: hidden; }
     .player-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .player-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
     .btn-play { background: #ff0000; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+
+    /* YouTube IFrame Mini Player */
+    #ytplayer-wrapper { position: fixed; bottom: -9999px; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -87,7 +90,14 @@
     <button class="btn-play" id="playBtn" onclick="togglePlay()">▶</button>
   </div>
 
-  <audio id="audioPlayer" preload="auto"></audio>
+  <div id="ytplayer-wrapper">
+    <div id="ytplayer"></div>
+  </div>
+
+  <!-- Thẻ Audio im lặng kích hoạt Media Session để trình duyệt cho phép chạy ngầm khi tắt màn hình -->
+  <audio id="silentAudio" loop preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="></audio>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
     // -------------------------------------------------------------
@@ -95,79 +105,64 @@
     // -------------------------------------------------------------
     const DEFAULT_API_KEY = 'AIzaSyAc0rtaQga_-CdRwkltei5rBX-GQqyZLt8';
 
+    let player = null;
+    let isPlaying = false;
     let currentVideo = null;
-    const audioEl = document.getElementById('audioPlayer');
+    const silentAudio = document.getElementById('silentAudio');
 
     const urlParams = new URLSearchParams(window.location.search);
     let apiKey = urlParams.get('key') || DEFAULT_API_KEY;
 
-    audioEl.addEventListener('play', () => {
-      document.getElementById('playBtn').innerText = '❚❚';
-    });
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('ytplayer', {
+        height: '100',
+        width: '100',
+        playerVars: {
+          'playsinline': 1,
+          'controls': 0,
+          'autoplay': 1
+        },
+        events: {
+          'onStateChange': onPlayerStateChange
+        }
+      });
+    }
 
-    audioEl.addEventListener('pause', () => {
-      document.getElementById('playBtn').innerText = '▶';
-    });
-
-    audioEl.addEventListener('ended', () => {
-      document.getElementById('playBtn').innerText = '▶';
-    });
-
-    function togglePlay() {
-      if (audioEl.paused) {
-        audioEl.play();
-      } else {
-        audioEl.pause();
+    function onPlayerStateChange(event) {
+      if (event.data === YT.PlayerState.PLAYING) {
+        isPlaying = true;
+        document.getElementById('playBtn').innerText = '❚❚';
+        silentAudio.play().catch(() => {});
+        updateMediaSession();
+      } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+        isPlaying = false;
+        document.getElementById('playBtn').innerText = '▶';
+        silentAudio.pause();
       }
     }
 
-    // Danh sách các máy chủ Piped API dự phòng tự động chuyển đổi
-    const pipedInstances = [
-      "https://pipedapi.kavin.rocks",
-      "https://pipedapi.privacy.com.de",
-      "https://pipedapi-libre.kavin.rocks",
-      "https://pipedapi.rhea.dev"
-    ];
+    function togglePlay() {
+      if (!player) return;
+      if (isPlaying) {
+        player.pauseVideo();
+      } else {
+        player.playVideo();
+      }
+    }
 
-    async function playVideo(id, title, channel, thumb) {
+    function playVideo(id, title, channel, thumb) {
       currentVideo = { id, title, channel, thumb };
       document.getElementById('playerBar').style.display = 'flex';
       document.getElementById('pTitle').innerText = title;
-      document.getElementById('pSub').innerText = channel + ' • Đang kết nối luồng âm thanh...';
+      document.getElementById('pSub').innerText = channel;
       document.getElementById('pThumb').src = thumb;
 
-      let audioUrl = null;
-
-      // Thần tốc quét qua các máy chủ dự phòng cho đến khi lấy được link phát
-      for (let base of pipedInstances) {
-        try {
-          const res = await fetch(`${base}/streams/${id}`);
-          const data = await res.json();
-          if (data.audioStreams && data.audioStreams.length > 0) {
-            const stream = data.audioStreams.find(s => s.url) || data.audioStreams[0];
-            if (stream && stream.url) {
-              audioUrl = stream.url;
-              break;
-            }
-          }
-        } catch (e) {
-          console.warn(`Máy chủ ${base} lỗi, đang thử máy chủ khác...`);
-        }
+      if (player && player.loadVideoById) {
+        player.loadVideoById(id);
       }
-
-      if (audioUrl) {
-        audioEl.src = audioUrl;
-        try {
-          await audioEl.play();
-          document.getElementById('pSub').innerText = channel;
-          updateMediaSession();
-        } catch (e) {
-          alert('Trình duyệt chặn tự động phát. Hãy bấm nút Play trên thanh điều khiển.');
-        }
-      } else {
-        alert('Không thể tải luồng âm thanh phát nền từ tất cả máy chủ.');
-        document.getElementById('pSub').innerText = 'Lỗi phát nhạc';
-      }
+      
+      silentAudio.play().catch(() => {});
+      updateMediaSession();
     }
 
     function updateMediaSession() {
@@ -175,11 +170,16 @@
         navigator.mediaSession.metadata = new MediaMetadata({
           title: currentVideo.title,
           artist: currentVideo.channel,
-          album: 'Tube Player Background',
+          album: 'Tube Player',
           artwork: [{ src: currentVideo.thumb, sizes: '512x512', type: 'image/jpeg' }]
         });
-        navigator.mediaSession.setActionHandler('play', () => audioEl.play());
-        navigator.mediaSession.setActionHandler('pause', () => audioEl.pause());
+
+        navigator.mediaSession.setActionHandler('play', () => {
+          if (player) player.playVideo();
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          if (player) player.pauseVideo();
+        });
       }
     }
 

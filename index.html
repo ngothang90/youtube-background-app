@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Tube Player Background</title>
 
+  <!-- Kỹ thuật chặn tín hiệu ẩn trang giúp chạy ngầm khi tắt màn hình -->
+  <script>
+    Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+    Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+    document.addEventListener('visibilitychange', function(e) {
+      e.stopImmediatePropagation();
+    }, true);
+  </script>
+
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TubePlayer">
@@ -59,6 +68,8 @@
     .player-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .player-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
     .btn-play { background: #ff0000; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+
+    #ytplayer-container { position: fixed; bottom: -9999px; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -87,8 +98,14 @@
     <button class="btn-play" id="playBtn" onclick="togglePlay()">▶</button>
   </div>
 
-  <!-- Thẻ Audio HTML5 chuẩn giúp nghe xuyên màn hình khóa và đa nhiệm -->
-  <audio id="audioPlayer" preload="auto" playsinline></audio>
+  <div id="ytplayer-container">
+    <div id="ytplayer"></div>
+  </div>
+
+  <!-- Thẻ Audio phụ trợ kích hoạt MediaSession để điều khiển ngoài màn hình khóa -->
+  <audio id="silentAudio" loop preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="></audio>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
     // -------------------------------------------------------------
@@ -96,86 +113,66 @@
     // -------------------------------------------------------------
     const DEFAULT_API_KEY = 'AIzaSyAc0rtaQga_-CdRwkltei5rBX-GQqyZLt8';
 
+    let player = null;
+    let isPlaying = false;
     let currentVideo = null;
-    const audioEl = document.getElementById('audioPlayer');
+    const silentAudio = document.getElementById('silentAudio');
 
     const urlParams = new URLSearchParams(window.location.search);
     let apiKey = urlParams.get('key') || DEFAULT_API_KEY;
 
-    audioEl.addEventListener('play', () => {
-      document.getElementById('playBtn').innerText = '❚❚';
-    });
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('ytplayer', {
+        height: '200',
+        width: '200',
+        playerVars: {
+          'playsinline': 1,
+          'controls': 0,
+          'autoplay': 0
+        },
+        events: {
+          'onStateChange': onPlayerStateChange
+        }
+      });
+    }
 
-    audioEl.addEventListener('pause', () => {
-      document.getElementById('playBtn').innerText = '▶';
-    });
-
-    audioEl.addEventListener('ended', () => {
-      document.getElementById('playBtn').innerText = '▶';
-    });
-
-    function togglePlay() {
-      if (audioEl.paused) {
-        audioEl.play();
-      } else {
-        audioEl.pause();
+    function onPlayerStateChange(event) {
+      if (event.data === YT.PlayerState.PLAYING) {
+        isPlaying = true;
+        document.getElementById('playBtn').innerText = '❚❚';
+        silentAudio.play().catch(() => {});
+        updateMediaSession();
+      } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+        isPlaying = false;
+        document.getElementById('playBtn').innerText = '▶';
+        silentAudio.pause();
       }
     }
 
-    // Danh sách các máy chủ Invidious API dự phòng để trích xuất âm thanh chạy nền
-    const invidiousInstances = [
-      "https://vid.puffyan.us",
-      "https://invidious.perennialverse.net",
-      "https://inv.nadeko.net",
-      "https://invidious.privacyredirect.com"
-    ];
+    function togglePlay() {
+      if (!player) return;
+      if (isPlaying) {
+        player.pauseVideo();
+      } else {
+        player.playVideo();
+      }
+    }
 
-    async function playVideo(id, title, channel, thumb) {
+    function playVideo(id, title, channel, thumb) {
       currentVideo = { id, title, channel, thumb };
       document.getElementById('playerBar').style.display = 'flex';
       document.getElementById('pTitle').innerText = title;
-      document.getElementById('pSub').innerText = channel + ' • Đang lấy luồng âm thanh...';
+      document.getElementById('pSub').innerText = channel;
       document.getElementById('pThumb').src = thumb;
 
-      let audioStreamUrl = null;
-
-      // Quét qua các máy chủ Invidious để lấy link audio trực tiếp
-      for (let instance of invidiousInstances) {
-        try {
-          const res = await fetch(`${instance}/api/v1/videos/${id}`);
-          const data = await res.json();
-          if (data && data.adaptiveFormats) {
-            const audioFormats = data.adaptiveFormats.filter(f => f.type && f.type.includes('audio'));
-            if (audioFormats.length > 0) {
-              const m4aFormat = audioFormats.find(f => f.type.includes('mp4') || f.type.includes('m4a'));
-              const bestFormat = m4aFormat || audioFormats[0];
-              if (bestFormat && bestFormat.url) {
-                audioStreamUrl = bestFormat.url;
-                break;
-              }
-            }
-          }
-        } catch (e) {
-          console.warn(`Thử máy chủ ${instance} thất bại, đang chuyển...`);
-        }
+      if (player && player.loadVideoById) {
+        player.loadVideoById(id);
       }
-
-      if (audioStreamUrl) {
-        audioEl.src = audioStreamUrl;
-        try {
-          await audioEl.play();
-          document.getElementById('pSub').innerText = channel;
-          updateMediaSession();
-        } catch (err) {
-          alert('Trình duyệt chặn phát tự động. Hãy bấm nút Play trên thanh điều khiển.');
-        }
-      } else {
-        alert('Không thể trích xuất âm thanh từ video này. Vui lòng thử video khác.');
-        document.getElementById('pSub').innerText = 'Lỗi phát nhạc';
-      }
+      
+      silentAudio.play().catch(() => {});
+      updateMediaSession();
     }
 
-    // Cấu hình MediaSession API để hiển thị trình điều khiển đầy đủ trên màn hình khóa điện thoại
     function updateMediaSession() {
       if ('mediaSession' in navigator && currentVideo) {
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -184,8 +181,8 @@
           album: 'Tube Player Background',
           artwork: [{ src: currentVideo.thumb, sizes: '512x512', type: 'image/jpeg' }]
         });
-        navigator.mediaSession.setActionHandler('play', () => audioEl.play());
-        navigator.mediaSession.setActionHandler('pause', () => audioEl.pause());
+        navigator.mediaSession.setActionHandler('play', () => { if (player) player.playVideo(); });
+        navigator.mediaSession.setActionHandler('pause', () => { if (player) player.pauseVideo(); });
       }
     }
 
@@ -193,7 +190,7 @@
       document.getElementById('errorDisplay').innerHTML = '';
       
       if (!apiKey || apiKey === 'ĐIỀN_API_KEY_CỦA_BẠN_VÀO_ĐÂY') {
-        showError('Chưa có API Key! Vui lòng điền API Key vào dòng trong file index.html');
+        showError('Chưa có API Key! Vui lòng điền API Key vào mã nguồn.');
         return;
       }
 

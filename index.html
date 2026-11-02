@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Tube Player Background</title>
 
-  <!-- Kỹ thuật chặn tín hiệu ẩn trang giúp chạy ngầm khi tắt màn hình -->
+  <!-- Chặn tín hiệu ẩn trang của trình duyệt -->
   <script>
     Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
     Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
@@ -102,7 +102,6 @@
     <div id="ytplayer"></div>
   </div>
 
-  <!-- Thẻ Audio phụ trợ kích hoạt MediaSession để điều khiển ngoài màn hình khóa -->
   <audio id="silentAudio" loop preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="></audio>
 
   <script src="https://www.youtube.com/iframe_api"></script>
@@ -116,10 +115,21 @@
     let player = null;
     let isPlaying = false;
     let currentVideo = null;
+    let audioCtx = null;
     const silentAudio = document.getElementById('silentAudio');
 
     const urlParams = new URLSearchParams(window.location.search);
     let apiKey = urlParams.get('key') || DEFAULT_API_KEY;
+
+    // Kỹ thuật Web Audio API Keep-Alive chống điện thoại ngắt tiến trình ngầm
+    function initAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
 
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('ytplayer', {
@@ -140,6 +150,7 @@
       if (event.data === YT.PlayerState.PLAYING) {
         isPlaying = true;
         document.getElementById('playBtn').innerText = '❚❚';
+        initAudioContext();
         silentAudio.play().catch(() => {});
         updateMediaSession();
       } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
@@ -149,8 +160,22 @@
       }
     }
 
+    // Tự động ép phát lại nếu hệ điều hành cố tình ngắt quãng ngầm
+    setInterval(() => {
+      if (isPlaying && player && player.getPlayerState) {
+        const state = player.getPlayerState();
+        if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.ENDED) {
+          try {
+            player.playVideo();
+            initAudioContext();
+          } catch(e) {}
+        }
+      }
+    }, 2000);
+
     function togglePlay() {
       if (!player) return;
+      initAudioContext();
       if (isPlaying) {
         player.pauseVideo();
       } else {
@@ -165,6 +190,7 @@
       document.getElementById('pSub').innerText = channel;
       document.getElementById('pThumb').src = thumb;
 
+      initAudioContext();
       if (player && player.loadVideoById) {
         player.loadVideoById(id);
       }
@@ -181,7 +207,7 @@
           album: 'Tube Player Background',
           artwork: [{ src: currentVideo.thumb, sizes: '512x512', type: 'image/jpeg' }]
         });
-        navigator.mediaSession.setActionHandler('play', () => { if (player) player.playVideo(); });
+        navigator.mediaSession.setActionHandler('play', () => { initAudioContext(); if (player) player.playVideo(); });
         navigator.mediaSession.setActionHandler('pause', () => { if (player) player.pauseVideo(); });
       }
     }
